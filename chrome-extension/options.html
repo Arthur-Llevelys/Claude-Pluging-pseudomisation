@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- AxiorHub Pseudonymisation Claude - Créé par Timo RAINIO Avocat - Licence AGPL-3.0-or-later -->
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Réglages AxiorHub Pseudonymisation</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    body { width: auto; min-width: 420px; max-width: 560px; padding: 8px 0; }
+    label.field { display: block; margin: 10px 0; }
+    label.field input[type=text], label.field input[type=number], label.field input[type=password] {
+      width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font: inherit; color: var(--fg); background: var(--bg);
+    }
+    .check { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; }
+    .check input { margin-top: 3px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <div>
+        <h1>Réglages · AxiorHub Pseudonymisation Claude</h1>
+        <p class="sub">Créé par Timo RAINIO Avocat · AGPL-3.0</p>
+      </div>
+    </div>
+  </header>
+  <section class="card">
+    <label class="field">Port du proxy local (127.0.0.1)
+      <input type="number" id="port" min="1" max="65535">
+    </label>
+    <label class="field">Jeton d'API locale (PSEUDO_PROXY_API_TOKEN, facultatif)
+      <input type="password" id="token" autocomplete="off">
+    </label>
+    <label class="check">
+      <input type="checkbox" id="strict">
+      <span><strong>Mode strict</strong> : si le proxy est injoignable, le message n'est pas envoyé à claude.ai (recommandé). Désactivé, le message part en clair avec un avertissement.</span>
+    </label>
+    <label class="check">
+      <input type="checkbox" id="restore">
+      <span><strong>Restitution</strong> : remplacer les marqueurs par les vraies valeurs dans les réponses affichées. Désactivé, vous voyez les marqueurs ([PERSONNE_1]…).</span>
+    </label>
+    <div class="row">
+      <button id="save">Enregistrer</button>
+    </div>
+    <p id="saved" class="muted" hidden>Réglages enregistrés. Rechargez l'onglet claude.ai.</p>
+  </section>
+  <section class="card">
+    <h2>Rappels</h2>
+    <p class="muted">La table de correspondance reste en mémoire du proxy local (TTL par défaut 30 minutes). L'extension ne parle qu'à 127.0.0.1. Les fichiers joints sur claude.ai ne sont pas pseudonymisés : utilisez le texte collé ou Claude Code via le proxy.</p>
+  </section>
+  <script src="options.js"></script>
+</body>
+</html>

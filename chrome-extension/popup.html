@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- AxiorHub Pseudonymisation Claude - Créé par Timo RAINIO Avocat - Licence AGPL-3.0-or-later -->
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>AxiorHub Pseudonymisation</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <div class="title">
+      <span id="dot" class="dot"></span>
+      <div>
+        <h1>AxiorHub Pseudonymisation Claude</h1>
+        <p class="sub">Créé par Timo RAINIO Avocat · AGPL-3.0</p>
+      </div>
+    </div>
+    <label class="switch" title="Activer / désactiver la pseudonymisation sur claude.ai">
+      <input type="checkbox" id="enabled">
+      <span>Active</span>
+    </label>
+  </header>
+
+  <section id="status" class="card">
+    <p id="statusText">Connexion au proxy local…</p>
+    <p id="statusDetail" class="muted"></p>
+  </section>
+
+  <section class="card">
+    <h2>Aperçu de ce qui part</h2>
+    <textarea id="previewIn" rows="3" placeholder="Collez un texte pour voir ce que Claude recevrait…"></textarea>
+    <div class="row">
+      <button id="previewBtn">Pseudonymiser</button>
+      <button id="selftestBtn" class="secondary">Autotest</button>
+    </div>
+    <pre id="previewOut" class="out" hidden></pre>
+    <p id="selftestLine" class="selftest" hidden></p>
+  </section>
+
+  <section class="card">
+    <h2>Audit (sans valeurs réelles)</h2>
+    <table id="statsTable"><tbody></tbody></table>
+    <p id="statsEmpty" class="muted">Aucun remplacement pour l'instant.</p>
+  </section>
+
+  <footer>
+    <a href="#" id="optionsLink">Réglages (port, jeton, mode strict)</a>
+    <span class="muted">Les fichiers joints sur claude.ai ne sont pas pseudonymisés.</span>
+  </footer>
+  <script src="popup.js"></script>
+</body>
+</html>

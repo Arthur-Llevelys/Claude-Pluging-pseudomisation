@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "AxiorHub Pseudonymisation Claude",
+  "short_name": "AxiorHub Pseudo",
+  "version": "1.0.0",
+  "description": "Pseudonymise les données personnelles saisies sur claude.ai grâce au proxy local AxiorHub (Windows, 127.0.0.1) et restitue les valeurs dans les réponses. Créé par Timo RAINIO Avocat. Licence AGPL-3.0.",
+  "author": "Timo RAINIO Avocat",
+  "homepage_url": "https://www.gnu.org/licenses/agpl-3.0.html",
+  "permissions": ["storage"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "background": {
+    "service_worker": "service_worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["interceptor.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AxiorHub Pseudonymisation Claude",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
