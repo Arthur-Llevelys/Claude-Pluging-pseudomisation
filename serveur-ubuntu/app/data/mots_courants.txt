@@ -1,0 +1,75 @@
+# Mots courants qui ne sont JAMAIS, à eux seuls, un nom de personne ou de société.
+# Un par ligne ou plusieurs séparés par des espaces. Comparaison sans casse ni accents.
+# Cette liste est livrée avec l'application. Pour l'étendre sans toucher au code, ajoutez vos
+# mots dans /etc/anonymiseur/mots_courants.txt puis redémarrez le service.
+
+# --- en-têtes de courriel et de courrier
+objet subject sujet from to cc cci bcc date sent envoye envoyee recu recue de a re tr fw fwd
+expediteur destinataire destinataires copie reponse transfert piece pieces jointe jointes
+bonjour bonsoir cordialement salutations merci urgent important confidentiel rappel relance
+
+# --- argent, créances, comptabilité
+creance creances montant montants solde soldes total totaux sous-total acompte acomptes
+echeance echeances echeancier loyer loyers charges charge provision provisions depot garantie
+caution cautions honoraires frais interets interet penalite penalites indemnite indemnites
+prejudice prejudices dommages remboursement paiement paiements reglement reglements virement
+virements prelevement cheque cheques facture factures devis avoir avoirs note debit credit
+dette dettes impaye impayes impayee impayees arriere arrieres capital principal accessoire
+accessoires tva taxe taxes remise rabais escompte majoration minoration retenue budget exercice
+compte comptes bilan resultat recette recettes depense depenses tresorerie
+
+# --- procédure et rédaction juridique
+faits procedure discussion moyens dispositif pretentions demande demandes defense replique
+conclusions conclusion introduction contexte synthese resume observations remarques attention
+nota exemple annexe annexes bordereau piece communication signification notification
+citation assignation requete ordonnance jugement arret decision avis recours appel pourvoi
+audience plaidoirie delibere mediation conciliation transaction protocole accord contrat
+contrats avenant clause clauses article articles alinea paragraphe chapitre section titre
+preambule definitions obligations responsabilite resiliation resolution nullite prescription
+forclusion mise demeure sommation commandement saisie execution titre executoire
+demandeur demanderesse defendeur defenderesse appelant appelante intime intimee requerant
+requerante partie parties adverse creancier creanciere debiteur debitrice bailleur bailleresse
+preneur locataire locataires proprietaire proprietaires coproprietaire coproprietaires
+vendeur vendeuse acquereur acheteur cedant cessionnaire mandant mandataire employeur salarie
+salariee client cliente clients confrere consoeur conseil avocat avocate
+
+# --- dispositif des décisions et abréviations de citation
+condamne condamnons deboute deboutons ordonne ordonnons rejette rejetons confirme infirme
+constate constatons dit disons declare declarons juge jugeons statuant depens motifs moyen
+attendu considerant vu cass civ com soc crim bull req ass plen obs ibid op cit cf ex etc
+qpc litige solution amiable delai delais
+
+# --- fonctions, adjectifs et noms génériques d'organisation
+general generale generaux juridique juridiques adjoint adjointe delegue deleguee national
+nationale regional regionale departemental departementale municipal municipale central
+centrale international internationale europeen europeenne francais francaise public publique
+prive privee commercial commerciale industriel industrielle medical medicale hospitalier
+universitaire superieur superieure financier financiere technique administratif
+banque assurance assurances mutuelle caisse agence cabinet groupe association syndicat
+federation administration ministere prefecture mairie finances concurrence direction autorite
+prestataire fournisseur sous-traitant beneficiaire souscripteur assure assureur victime tiers
+decision decisions comite commission conseil bureau siege etablissement succursale filiale
+
+# --- immeuble et copropriété
+lot lots cave caves parking parkings garage garages box appartement appartements studio local
+locaux bureau bureaux commerce commerces batiment batiments etage etages escalier porte entree
+hall loge grenier combles jardin terrasse balcon chaufferie ascenseur toiture facade parties
+communes privatives tantiemes quote-part copropriete syndic syndicat assemblee resolution vote
+majorite unanimite travaux ravalement entretien sinistre degat degats eaux
+
+# --- tableaux et documents
+tableau colonne ligne lignes numero reference references libelle designation description
+quantite prix unitaire nombre taux duree periode debut fin statut etat type nature categorie
+commentaire commentaires observation remarque nom prenom adresse telephone courriel email
+signature cachet fait lu approuve bon
+
+# --- temps
+annee annees mois trimestre semestre semaine jour jours aujourd hui hier demain
+janvier fevrier mars avril mai juin juillet aout septembre octobre novembre decembre
+lundi mardi mercredi jeudi vendredi samedi dimanche
+
+# --- divers fréquents en tête de phrase
+nous vous ils elles notre votre nos vos leur leurs son sa ses mon ma mes ce cet cette ces
+voici voila ci-joint ci-dessus ci-dessous ainsi donc cependant toutefois neanmoins enfin
+premierement deuxiemement troisiemement suite selon conformement concernant suivant
+madame monsieur mesdames messieurs maitre cher chere chers

@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anonymiseur</title>
+<style>
+:root{
+  --bg:#f6f5f2; --panel:#ffffff; --ink:#1d1f23; --muted:#6a6f78; --line:#e2e0da;
+  --accent:#1f5f8b; --accent-ink:#ffffff; --mark-bg:#e6eef6; --mark-ink:#174a6d;
+  --warn-bg:#fff5e0; --warn-ink:#7a5200; --ok:#2e7d4f; --danger:#a33a2c;
+  --radius:10px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15171a; --panel:#1e2125; --ink:#e7e8ea; --muted:#9aa0a8; --line:#30343a;
+    --accent:#5aa3d6; --accent-ink:#0d1a24; --mark-bg:#23384a; --mark-ink:#b9dcf5;
+    --warn-bg:#3a2f15; --warn-ink:#f1d18a; --ok:#6cc596; --danger:#e27d6f;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
+.badge{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.badge.ok{color:var(--ok);border-color:currentColor}.badge.ko{color:var(--danger);border-color:currentColor}
+.spacer{flex:1}
+main{max-width:1200px;margin:0 auto;padding:18px 16px 60px}
+.bar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:14px}
+label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
+input[type=text],input[type=password],textarea,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit}
+textarea{font-family:var(--mono);font-size:13px;min-height:260px;resize:vertical}
+button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+button.danger{color:var(--danger)}
+button:disabled{opacity:.5;cursor:default}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--muted);padding:10px 14px}
+.tabs button.active{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.card h2{font-size:14px;margin:0 0 10px;font-weight:650}
+.opts{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
+.opts label{display:flex;gap:6px;align-items:center;color:var(--ink);margin:0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.preview{white-space:pre-wrap;font-family:var(--mono);font-size:13px;min-height:260px;max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:10px}
+.m{background:var(--mark-bg);color:var(--mark-ink);border-radius:4px;padding:0 3px;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+td.mono{font-family:var(--mono)}
+.warn{background:var(--warn-bg);color:var(--warn-ink);border-radius:8px;padding:8px 10px;font-size:13px;margin-top:10px}
+.muted{color:var(--muted);font-size:13px}
+.drop{border:1px dashed var(--line);border-radius:8px;padding:10px;text-align:center;font-size:13px;color:var(--muted);margin-top:8px}
+.drop.over{border-color:var(--accent);color:var(--accent)}
+details summary{cursor:pointer;color:var(--muted);font-size:13px}
+.hidden{display:none}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>Anonymiseur</h1>
+  <span id="etat" class="badge">connexion…</span>
+  <span class="spacer"></span>
+  <details id="param"><summary>Clé d'accès</summary>
+    <div style="margin-top:6px;display:flex;gap:6px;min-width:260px">
+      <input id="cle" type="password" placeholder="Clé d'API (ANON_API_KEY)" autocomplete="off">
+      <button id="cleOk">OK</button>
+    </div>
+  </details>
+</header>
+
+<main>
+  <div class="bar">
+    <div style="flex:1;min-width:220px;max-width:380px">
+      <label for="dossier">Dossier (les marqueurs restent identiques dans un même dossier)</label>
+      <input id="dossier" type="text" list="listeDossiers" value="general">
+      <datalist id="listeDossiers"></datalist>
+    </div>
+    <button id="nouveau" title="Créer une référence neutre">Nouveau dossier</button>
+  </div>
+
+  <div class="tabs">
+    <button data-tab="anon" class="active">1. Anonymiser</button>
+    <button data-tab="reid">2. Ré-identifier la réponse</button>
+    <button data-tab="dos">Dossiers</button>
+  </div>
+
+  <!-- ANONYMISER -->
+  <section id="tab-anon">
+    <div class="grid">
+      <div class="card">
+        <h2>Texte d'origine</h2>
+        <textarea id="source" placeholder="Collez ici le texte à anonymiser…"></textarea>
+        <div class="drop" id="drop">Glissez un fichier ici (docx, pdf, odt, txt, eml…) ou <a href="#" id="choisir">choisissez-le</a>
+          <input type="file" id="fichier" class="hidden" accept=".docx,.pdf,.odt,.txt,.md,.csv,.rtf,.html,.htm,.eml"></div>
+        <details style="margin-top:10px"><summary>Options de détection</summary>
+          <div class="opts" id="types" style="margin-top:8px"></div>
+          <div class="opts" style="margin-top:8px">
+            <label><input type="checkbox" id="toutesDates"> Masquer toutes les dates (pas seulement les dates de naissance)</label>
+          </div>
+          <label style="margin-top:10px">Termes à masquer en plus (un par ligne, ex. « SOCIETE: Alpha » ou « PERSONNE: Dupont »)</label>
+          <textarea id="termes" style="min-height:70px"></textarea>
+        </details>
+        <div class="row">
+          <label style="display:flex;gap:6px;align-items:center;color:var(--ink);margin:0"><input type="checkbox" id="consigne" checked> Ajouter la consigne pour Claude</label>
+          <span class="spacer"></span>
+          <button class="primary" id="btnAnon">Anonymiser</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Texte à envoyer à Claude</h2>
+        <div class="preview" id="apercu"><span class="muted">Le résultat apparaîtra ici. Relisez-le avant de l'envoyer.</span></div>
+        <div id="avertAnon"></div>
+        <div class="row"><span class="muted" id="resume"></span><span class="spacer"></span><button id="copierAnon" disabled>Copier</button></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Correspondances détectées <span class="muted">(visibles uniquement ici, jamais envoyées à Claude)</span></h2>
+      <div id="tableAnon" class="muted">—</div>
+    </div>
+  </section>
+
+  <!-- RÉ-IDENTIFIER -->
+  <section id="tab-reid" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Réponse de Claude (avec marqueurs)</h2>
+        <textarea id="reponse" placeholder="Collez la réponse de Claude contenant [PERSONNE_1], [SOCIETE_2]…"></textarea>
+        <div class="row"><span class="spacer"></span><button class="primary" id="btnReid">Ré-identifier</button></div>
+      </div>
+      <div class="card">
+        <h2>Texte ré-identifié</h2>
+        <div class="preview" id="apercuReid"><span class="muted">—</span></div>
+        <div id="avertReid"></div>
+        <div class="row"><span class="muted" id="resumeReid"></span><span class="spacer"></span>
+          <button id="docx" disabled>Télécharger .docx</button><button id="copierReid" disabled>Copier</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOSSIERS -->
+  <section id="tab-dos" class="hidden">
+    <div class="card">
+      <h2>Dossiers enregistrés <span class="muted" id="retention"></span></h2>
+      <div id="tableDos" class="muted">—</div>
+    </div>
+    <div class="card hidden" style="margin-top:16px" id="carteEntites">
+      <h2 id="titreEntites"></h2>
+      <div id="tableEntites"></div>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const store = {
+    get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} }
+  };
+  const toast = msg => { const t = $("toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1800); };
+  const LIBELLES = {PERSONNE:"Personnes", SOCIETE:"Sociétés", ADRESSE:"Adresses", DATE_NAISSANCE:"Dates de naissance",
+    LIEU_NAISSANCE:"Lieux de naissance", SIRET:"SIRET", SIREN:"SIREN", TVA:"N° TVA", EMAIL:"E-mails",
+    TELEPHONE:"Téléphones", IBAN:"IBAN", NIR:"N° sécu (NIR)", DATE:"Dates", AUTRE:"Termes imposés"};
+
+  let cle = store.get("anon_cle", "");
+  $("cle").value = cle;
+  $("dossier").value = store.get("anon_dossier", "general");
+  $("cleOk").onclick = () => { cle = $("cle").value.trim(); store.set("anon_cle", cle); $("param").open = false; init(); };
+  $("dossier").onchange = () => store.set("anon_dossier", $("dossier").value.trim());
+  $("nouveau").onclick = () => {
+    const d = new Date(), p = n => String(n).padStart(2, "0");
+    const id = `D-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${Math.random().toString(36).slice(2,6)}`;
+    $("dossier").value = id; store.set("anon_dossier", id); toast("Nouveau dossier : " + id);
+  };
+  const dossier = () => $("dossier").value.trim() || "general";
+
+  async function api(chemin, opts = {}) {
+    opts.headers = Object.assign({"X-API-Key": cle}, opts.headers || {});
+    const r = await fetch(chemin, opts);
+    if (r.status === 401) { $("param").open = true; throw new Error("Clé d'accès manquante ou invalide."); }
+    if (!r.ok) { let m = r.statusText; try { m = (await r.json()).erreur || m; } catch {} throw new Error(m); }
+    return r;
+  }
+  const post = (chemin, corps) => api(chemin, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(corps)});
+
+  // Onglets
+  document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("active", x === b));
+    ["anon","reid","dos"].forEach(t => $("tab-"+t).classList.toggle("hidden", t !== b.dataset.tab));
+    if (b.dataset.tab === "dos") chargerDossiers();
+  });
+
+  function surligner(texte) {
+    return esc(texte).replace(/\[[A-Z_]+_\d+\]/g, m => `<span class="m">${m}</span>`);
+  }
+  function avert(el, liste) {
+    $(el).innerHTML = (liste || []).map(a => `<div class="warn">${esc(a)}</div>`).join("");
+  }
+  function tableEntites(entites, avecFormes) {
+    if (!entites.length) return '<span class="muted">Aucune donnée détectée.</span>';
+    return `<table><thead><tr><th>Marqueur</th><th>Type</th><th>Valeur réelle</th>${avecFormes ? "<th>Formes rencontrées</th>" : ""}<th>Occ.</th></tr></thead><tbody>` +
+      entites.map(e => `<tr><td class="mono">${esc(e.marqueur)}</td><td>${esc(LIBELLES[e.type] || e.type)}</td><td>${esc(e.valeur ?? "•••")}${e.exclu ? " (exclu)" : ""}</td>` +
+        (avecFormes ? `<td>${esc((e.formes || e.variantes || []).join(" · "))}</td>` : "") + `<td>${e.occurrences}</td></tr>`).join("") + "</tbody></table>";
+  }
+
+  function options() {
+    const types = [...document.querySelectorAll("#types input:checked")].map(i => i.value);
+    return {types, toutes_dates: $("toutesDates").checked, consigne: $("consigne").checked,
+            termes: $("termes").value.split("\n").filter(Boolean)};
+  }
+  let dernierAnon = "";
+  function afficherAnon(r) {
+    dernierAnon = r.texte;
+    $("apercu").innerHTML = surligner(r.texte);
+    $("copierAnon").disabled = false;
+    const n = Object.values(r.statistiques || {}).reduce((a, b) => a + b, 0);
+    $("resume").textContent = `${r.nb_remplacements} remplacement(s), ${n} entité(s) — dossier « ${r.dossier} »`;
+    avert("avertAnon", r.avertissements);
+    $("tableAnon").innerHTML = tableEntites(r.entites, true);
+  }
+
+  $("btnAnon").onclick = async () => {
+    const texte = $("source").value;
+    if (!texte.trim()) return toast("Collez d'abord un texte.");
+    $("btnAnon").disabled = true;
+    try {
+      const r = await (await post("/api/anonymiser", {texte, dossier: dossier(), options: options(), inclure_valeurs: true})).json();
+      afficherAnon(r); store.set("anon_dossier", dossier());
+    } catch (e) { avert("avertAnon", [e.message]); }
+    finally { $("btnAnon").disabled = false; }
+  };
+
+  async function envoyerFichier(f) {
+    const fd = new FormData();
+    fd.append("fichier", f); fd.append("dossier", dossier());
+    fd.append("options", JSON.stringify(options())); fd.append("inclure_valeurs", "1");
+    $("drop").textContent = "Analyse de " + f.name + "…";
+    try {
+      const r = await (await api("/api/anonymiser-fichier", {method:"POST", body: fd})).json();
+      $("source").value = `(fichier : ${f.name} — ${r.nb_caracteres} caractères extraits)`;
+      afficherAnon(r);
+    } catch (e) { avert("avertAnon", [e.message]); }
+    finally { $("drop").innerHTML = 'Glissez un autre fichier ici ou <a href="#" id="choisir">choisissez-le</a>'; $("choisir").onclick = choisir; }
+  }
+  const choisir = e => { e.preventDefault(); $("fichier").click(); };
+  $("choisir").onclick = choisir;
+  $("fichier").onchange = () => $("fichier").files[0] && envoyerFichier($("fichier").files[0]);
+  ["dragenter","dragover"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+  ["dragleave","drop"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
+  $("drop").addEventListener("drop", e => e.dataTransfer.files[0] && envoyerFichier(e.dataTransfer.files[0]));
+
+  async function copier(texte) {
+    try { await navigator.clipboard.writeText(texte); toast("Copié"); }
+    catch { const t = document.createElement("textarea"); t.value = texte; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); toast("Copié"); }
+  }
+  $("copierAnon").onclick = () => copier(dernierAnon);
+
+  let dernierReid = "";
+  $("btnReid").onclick = async () => {
+    const texte = $("reponse").value;
+    if (!texte.trim()) return toast("Collez d'abord la réponse de Claude.");
+    try {
+      const r = await (await post("/api/reidentifier", {texte, dossier: dossier()})).json();
+      dernierReid = r.texte;
+      $("apercuReid").textContent = r.texte;
+      $("copierReid").disabled = $("docx").disabled = false;
+      $("resumeReid").textContent = `${r.nb_remplacements} marqueur(s) remplacé(s)`;
+      avert("avertReid", r.marqueurs_inconnus.length ? [`Marqueurs inconnus dans le dossier « ${r.dossier} » : ${r.marqueurs_inconnus.join(", ")} — vérifiez le dossier sélectionné.`] : []);
+    } catch (e) { avert("avertReid", [e.message]); }
+  };
+  $("copierReid").onclick = () => copier(dernierReid);
+  $("docx").onclick = async () => {
+    try {
+      const r = await post("/api/reidentifier-fichier", {texte: $("reponse").value, dossier: dossier(), format: "docx", nom: "reponse-" + dossier()});
+      const url = URL.createObjectURL(await r.blob());
+      const a = Object.assign(document.createElement("a"), {href: url, download: "reponse-" + dossier() + ".docx"});
+      a.click(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (e) { avert("avertReid", [e.message]); }
+  };
+
+  async function chargerDossiers() {
+    try {
+      const r = await (await api("/api/dossiers")).json();
+      $("retention").textContent = `— supprimés automatiquement après ${r.retention_jours} jours d'inactivité`;
+      $("listeDossiers").innerHTML = r.dossiers.map(d => `<option value="${esc(d.id)}">`).join("");
+      if (!r.dossiers.length) { $("tableDos").innerHTML = '<span class="muted">Aucun dossier.</span>'; return; }
+      const f = t => new Date(t * 1000).toLocaleString("fr-FR");
+      $("tableDos").innerHTML = `<table><thead><tr><th>Dossier</th><th>Entités</th><th>Dernière utilisation</th><th></th></tr></thead><tbody>` +
+        r.dossiers.map(d => `<tr><td class="mono">${esc(d.id)}</td><td>${d.nb_entites}</td><td>${f(d.utilise)}</td>
+          <td style="text-align:right"><button data-voir="${esc(d.id)}">Voir</button> <button class="danger" data-suppr="${esc(d.id)}">Supprimer</button></td></tr>`).join("") + "</tbody></table>";
+      document.querySelectorAll("[data-voir]").forEach(b => b.onclick = async () => {
+        let e, note = "";
+        try { e = await (await api(`/api/dossiers/${encodeURIComponent(b.dataset.voir)}/entites?valeurs=1`)).json(); }
+        catch { e = await (await api(`/api/dossiers/${encodeURIComponent(b.dataset.voir)}/entites`)).json(); note = " (valeurs réelles masquées : export désactivé sur ce serveur)"; }
+        $("carteEntites").classList.remove("hidden");
+        $("titreEntites").textContent = "Correspondances — " + e.dossier + note;
+        $("tableEntites").innerHTML = tableEntites(e.entites, true);
+      });
+      document.querySelectorAll("[data-suppr]").forEach(b => b.onclick = async () => {
+        if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Confirmer ?"; return; }
+        await api(`/api/dossiers/${encodeURIComponent(b.dataset.suppr)}`, {method: "DELETE"});
+        $("carteEntites").classList.add("hidden"); toast("Dossier supprimé"); chargerDossiers();
+      });
+    } catch (e) { $("tableDos").innerHTML = `<div class="warn">${esc(e.message)}</div>`; }
+  }
+
+  async function init() {
+    try {
+      const s = await (await fetch("/api/sante")).json();
+      const ner = s.spacy.actif;
+      $("etat").textContent = `v${s.version} · ${ner ? "spaCy " + s.spacy.modele : "règles seules (spaCy inactif)"}`;
+      $("etat").className = "badge " + (ner ? "ok" : "ko");
+      if (!$("types").children.length) {
+        $("types").innerHTML = s.types.filter(t => t !== "DATE" && t !== "AUTRE").map(t =>
+          `<label><input type="checkbox" value="${t}" ${s.types_par_defaut.includes(t) ? "checked" : ""}> ${esc(LIBELLES[t] || t)}</label>`).join("");
+      }
+      if (s.cle_requise && !cle) $("param").open = true; else chargerDossiers();
+    } catch { $("etat").textContent = "serveur injoignable"; $("etat").className = "badge ko"; }
+  }
+  init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+{
+  "manifest_version": "0.2",
+  "name": "anonymiseur-cabinet",
+  "display_name": "Anonymiseur (cabinet)",
+  "version": "1.6.0",
+  "description": "AxiorHub Pseudonymisation Claude - Créée par Timo Rainio Avocat. Pseudonymise vos documents avant que Claude ne les lise — sur votre serveur d'anonymisation ou entièrement sur votre poste (moteur local avec Ollama) — et enregistre les livrables ré-identifiés directement dans le dossier de l'affaire.",
+  "long_description": "AxiorHub Pseudonymisation Claude - Créée par Timo Rainio Avocat — logiciel libre sous licence GNU AGPL v3 ou ultérieure.\n\nClaude ne reçoit jamais le contenu en clair de vos fichiers : l'extension lit le document sur votre poste, l'envoie à votre serveur d'anonymisation (réseau local) et ne transmet à Claude que la version où noms, prénoms, sociétés, adresses, dates et lieux de naissance, SIRET/SIREN, TVA, IBAN, NIR, e-mails et téléphones sont remplacés par des marqueurs ([PERSONNE_1], [SOCIETE_1]…).\n\nNouveau depuis la version 1.1 — travail sur place, sans copie de fichiers : vous désignez le dossier de l'affaire dans une fenêtre de sélection (Claude n'en voit jamais le nom réel) ; les documents sont lus là où ils se trouvent ; les livrables rédigés par Claude sont ré-identifiés par le serveur et écrits dans ce même dossier, à côté des pièces. Un fichier Word, PowerPoint, Excel ou texte contenant des marqueurs peut être ré-identifié tel quel, mise en forme conservée. Chaque dossier reçoit automatiquement sa propre référence d'anonymisation.\n\nNouveau dans la version 1.2 — rien ne passe en clair par la conversation : création d'un dossier d'affaire à référence neutre (le libellé réel se tape dans une fenêtre locale), import de pièces par une fenêtre de sélection ou depuis les Téléchargements, import du texte copié (« lis le presse-papiers ») dont Claude ne reçoit que la version pseudonymisée, et réponse ré-identifiée placée directement dans le presse-papiers pour être collée dans votre messagerie. Un journal local des opérations, sans aucune donnée en clair, est tenu sur le poste.\n\nNouveau dans la version 1.3 — restitution : vos modèles Word sont remplis par Claude en conservant leur mise en forme (en-têtes et pieds de page compris), un fichier Word, Excel ou PowerPoint produit par Claude est ré-identifié et enregistré directement dans le dossier de l'affaire, et le livrable peut s'ouvrir automatiquement.\n\nNouveau dans la version 1.4 — moteur local : sans serveur, l'extension détecte elle-même les données identifiantes (les mêmes règles que le serveur), reconnaît les noms grâce à un petit modèle de langue installé sur votre poste avec Ollama, et garde la table de correspondance chiffrée sur votre poste. Activez « Moteur local » dans les réglages ; installez Ollama (ollama.com) puis le modèle indiqué (par défaut : ollama pull ministral-3:3b, 2,8 Go). Sans Ollama, seules les règles s'appliquent et l'extension vous le signale.\n\nNouveau dans la version 1.5 — corrections : si la détection laisse un nom en clair, masque un mot courant ou donne deux marqueurs à la même personne, Claude peut corriger le dossier (corriger_entite) ; un nom à ajouter se tape dans une fenêtre locale, jamais dans la conversation.\n\nNouveau dans la version 1.6 — PDF scannés lus par reconnaissance de caractères (OCR : ocrmypdf sur le serveur, Tesseract avec le moteur local) et import direct d'un courriel et de ses pièces jointes depuis votre messagerie (IMAP, lecture seule).\n\nAttention : ce que vous tapez ou collez directement dans la conversation n'est pas filtré — copiez le texte et demandez à Claude de lire le presse-papiers.",
+  "author": {
+    "name": "Timo Rainio, avocat",
+    "url": "https://avocat-rainio.com"
+  },
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.js"
+      ],
+      "env": {
+        "ANON_SERVEUR": "${user_config.serveur}",
+        "ANON_CLE": "${user_config.cle_api}",
+        "ANON_DOSSIER_TRAVAIL": "${user_config.dossier_travail}",
+        "ANON_DOSSIER_SORTIE": "${user_config.dossier_sortie}",
+        "ANON_DOSSIER_DEFAUT": "${user_config.dossier_defaut}",
+        "ANON_SOUS_DOSSIER_LIVRABLES": "${user_config.sous_dossier_livrables}",
+        "ANON_SOUS_DOSSIER_AFFAIRES": "${user_config.sous_dossier_affaires}",
+        "ANON_DOSSIER_MODELES": "${user_config.dossier_modeles}",
+        "ANON_OUVRIR_AUTO": "${user_config.ouvrir_automatiquement}",
+        "ANON_MOTEUR_LOCAL": "${user_config.moteur_local}",
+        "ANON_OLLAMA_URL": "${user_config.ollama_adresse}",
+        "ANON_OLLAMA_MODELE": "${user_config.ollama_modele}",
+        "ANON_IMAP_SERVEUR": "${user_config.imap_serveur}",
+        "ANON_IMAP_PORT": "${user_config.imap_port}",
+        "ANON_IMAP_UTILISATEUR": "${user_config.imap_utilisateur}",
+        "ANON_IMAP_MOT_DE_PASSE": "${user_config.imap_mot_de_passe}",
+        "ANON_IMAP_DOSSIER": "${user_config.imap_dossier}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "choisir_dossier",
+      "description": "Désigne le dossier à traiter dans une fenêtre de sélection : les documents y sont lus sur place, sans copie."
+    },
+    {
+      "name": "lister_fichiers",
+      "description": "Liste les documents du dossier choisi, noms pseudonymisés."
+    },
+    {
+      "name": "lire_fichier_anonymise",
+      "description": "Lit un document là où il se trouve et ne renvoie que sa version pseudonymisée."
+    },
+    {
+      "name": "enregistrer_document",
+      "description": "Ré-identifie un texte à marqueurs, ou remplit un modèle Word du cabinet, et l'enregistre dans le dossier de l'affaire."
+    },
+    {
+      "name": "reidentifier_fichier",
+      "description": "Remet les vraies données dans un fichier à marqueurs (docx, pptx, xlsx, odt, texte) et l'enregistre dans le dossier de l'affaire."
+    },
+    {
+      "name": "creer_dossier_affaire",
+      "description": "Crée le dossier d'une nouvelle affaire sous une référence neutre ; le libellé réel se saisit dans une fenêtre locale."
+    },
+    {
+      "name": "importer_fichiers",
+      "description": "Copie dans le dossier de l'affaire des pièces désignées dans une fenêtre, ou les derniers fichiers téléchargés."
+    },
+    {
+      "name": "importer_courriel",
+      "description": "Liste les derniers courriels (pseudonymisés) et importe un message avec ses pièces jointes dans le dossier de l'affaire, sans modifier la messagerie."
+    },
+    {
+      "name": "importer_presse_papiers",
+      "description": "Enregistre le texte copié (un courriel, par exemple) et n'en transmet que la version pseudonymisée."
+    },
+    {
+      "name": "reidentifier_vers_presse_papiers",
+      "description": "Place un texte ré-identifié dans le presse-papiers, prêt à coller, hors historique Windows."
+    },
+    {
+      "name": "lister_modeles",
+      "description": "Liste les modèles Word du cabinet (dossier des modèles), noms pseudonymisés."
+    },
+    {
+      "name": "enregistrer_fichier",
+      "description": "Ré-identifie un fichier produit par Claude (docx, xlsx, pptx, texte) reçu en base64 et l'enregistre dans le dossier de l'affaire."
+    },
+    {
+      "name": "corriger_entite",
+      "description": "Corrige la pseudonymisation d'un dossier : fusionner deux marqueurs, exclure un mot masqué à tort, ajouter un nom oublié (saisi dans une fenêtre locale)."
+    },
+    {
+      "name": "entites_du_dossier",
+      "description": "Liste les marqueurs attribués dans un dossier, sans les valeurs réelles."
+    },
+    {
+      "name": "etat_anonymiseur",
+      "description": "Vérifie la connexion au serveur, indique le dossier courant et les dossiers récents."
+    }
+  ],
+  "user_config": {
+    "moteur_local": {
+      "type": "boolean",
+      "title": "Moteur local (sans serveur)",
+      "description": "Détection et table de correspondance sur ce poste, sans serveur d'anonymisation. Nécessite Ollama pour reconnaître les noms (sinon : règles seules).",
+      "default": false,
+      "required": false
+    },
+    "ollama_adresse": {
+      "type": "string",
+      "title": "Adresse d'Ollama (moteur local)",
+      "description": "Adresse du service Ollama : sur ce poste (par défaut) ou sur une machine de votre réseau local. Les adresses Internet sont refusées.",
+      "default": "http://127.0.0.1:11434",
+      "required": false
+    },
+    "ollama_modele": {
+      "type": "string",
+      "title": "Modèle Ollama (moteur local)",
+      "description": "Petit modèle de langue utilisé pour reconnaître les noms. Les modèles « cloud » sont refusés.",
+      "default": "ministral-3:3b",
+      "required": false
+    },
+    "serveur": {
+      "type": "string",
+      "title": "Adresse du serveur d'anonymisation",
+      "description": "URL de votre serveur d'anonymisation sur le réseau local (inutile avec le moteur local).",
+      "default": "http://127.0.0.1:8765",
+      "required": false
+    },
+    "cle_api": {
+      "type": "string",
+      "title": "Clé d'API",
+      "description": "Valeur de ANON_API_KEY affichée à la fin de l'installation du serveur (inutile avec le moteur local).",
+      "sensitive": true,
+      "required": false
+    },
+    "dossier_travail": {
+      "type": "directory",
+      "title": "Dossier racine de vos dossiers",
+      "description": "Racine sous laquelle se trouvent vos dossiers d'affaires. Les documents y sont lus sur place : vous désignez le dossier à traiter dans une fenêtre de sélection, sans rien copier.",
+      "required": true
+    },
+    "dossier_sortie": {
+      "type": "directory",
+      "title": "Dossier de sortie de secours",
+      "description": "Utilisé seulement lorsqu'aucun dossier n'a été choisi. Sinon, les livrables ré-identifiés sont enregistrés dans le dossier de l'affaire, à côté des pièces.",
+      "required": false
+    },
+    "sous_dossier_livrables": {
+      "type": "string",
+      "title": "Sous-dossier des livrables (facultatif)",
+      "description": "Nom d'un sous-dossier du dossier de l'affaire où ranger les documents produits, par exemple « Projets IA ». Laissez vide pour les écrire à côté des pièces.",
+      "default": "",
+      "required": false
+    },
+    "sous_dossier_affaires": {
+      "type": "string",
+      "title": "Sous-dossier des nouvelles affaires (facultatif)",
+      "description": "Sous-dossier du dossier racine où créer les dossiers d'affaire (par exemple « 03 - Dossiers »). Laissez vide pour les créer à la racine.",
+      "default": "",
+      "required": false
+    },
+    "dossier_modeles": {
+      "type": "directory",
+      "title": "Dossier des modèles (facultatif)",
+      "description": "Dossier contenant vos modèles Word (docx, dotx) : Claude peut les remplir en conservant leur mise en forme.",
+      "required": false
+    },
+    "ouvrir_automatiquement": {
+      "type": "boolean",
+      "title": "Ouvrir automatiquement les livrables",
+      "description": "Ouvre dans Word (ou l'application par défaut) chaque document ré-identifié enregistré par Claude.",
+      "default": false,
+      "required": false
+    },
+    "dossier_defaut": {
+      "type": "string",
+      "title": "Référence d'anonymisation par défaut",
+      "description": "Utilisée seulement hors dossier choisi (évitez d'y mettre un nom de client). Chaque dossier choisi reçoit automatiquement sa propre référence.",
+      "default": "general",
+      "required": false
+    },
+    "imap_serveur": {
+      "type": "string",
+      "title": "Messagerie : serveur IMAP (facultatif)",
+      "description": "Ex. imap.votre-fournisseur.fr — permet à l'outil importer_courriel de lire vos courriels sans les faire passer par la conversation.",
+      "default": "",
+      "required": false
+    },
+    "imap_port": {
+      "type": "string",
+      "title": "Messagerie : port IMAP",
+      "description": "993 (connexion chiffrée) dans la plupart des cas.",
+      "default": "993",
+      "required": false
+    },
+    "imap_utilisateur": {
+      "type": "string",
+      "title": "Messagerie : identifiant",
+      "description": "Votre adresse ou identifiant de messagerie.",
+      "default": "",
+      "required": false
+    },
+    "imap_mot_de_passe": {
+      "type": "string",
+      "title": "Messagerie : mot de passe",
+      "description": "Mot de passe de la messagerie (ou mot de passe d'application). Stocké chiffré par Claude Desktop.",
+      "sensitive": true,
+      "default": "",
+      "required": false
+    },
+    "imap_dossier": {
+      "type": "string",
+      "title": "Messagerie : dossier à lire",
+      "description": "Dossier de la messagerie lu par importer_courriel.",
+      "default": "INBOX",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "win32",
+      "darwin",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  },
+  "keywords": [
+    "anonymisation",
+    "pseudonymisation",
+    "RGPD",
+    "avocat",
+    "confidentialité",
+    "ollama",
+    "local"
+  ],
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation"
+  }
+}

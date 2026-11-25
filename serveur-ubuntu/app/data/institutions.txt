@@ -1,0 +1,64 @@
+# Institutions et textes désignés par plusieurs mots : jamais une société ni une personne.
+# Une expression par ligne. Comparaison sans casse ni accents.
+# Pour en ajouter sans toucher au code : /etc/anonymiseur/ne_jamais_masquer.txt
+Banque de France
+Union européenne
+Commission européenne
+Parlement européen
+Conseil de l'Europe
+Cour européenne des droits de l'homme
+Cour de justice de l'Union européenne
+Organisation des Nations unies
+Conseil constitutionnel
+Conseil d'État
+Cour de cassation
+Cour des comptes
+Cour d'appel
+Cour administrative d'appel
+Tribunal judiciaire
+Tribunal de commerce
+Tribunal des activités économiques
+Tribunal administratif
+Conseil de prud'hommes
+Juge de l'exécution
+Juge aux affaires familiales
+Ministère public
+Parquet général
+Autorité de la concurrence
+Autorité des marchés financiers
+Direction générale des finances publiques
+Direction générale du travail
+Inspection du travail
+Défenseur des droits
+Assemblée nationale
+Journal officiel
+Trésor public
+Sécurité sociale
+Assurance maladie
+Caisse d'allocations familiales
+Caisse primaire d'assurance maladie
+Pôle emploi
+France Travail
+Éducation nationale
+Ordre des avocats
+Conseil national des barreaux
+Barreau de Lyon
+Barreau de Paris
+Chambre des notaires
+Chambre de commerce et d'industrie
+Registre du commerce et des sociétés
+Registre national des entreprises
+Code civil
+Code de commerce
+Code du travail
+Code pénal
+Code de procédure civile
+Code de procédure pénale
+Code de la consommation
+Code de la construction et de l'habitation
+Code général des impôts
+Code monétaire et financier
+Code de la sécurité sociale
+Président Directeur Général
+Directeur Général
+Directeur Juridique

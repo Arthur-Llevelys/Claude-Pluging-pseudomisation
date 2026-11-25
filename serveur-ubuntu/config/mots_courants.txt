@@ -1,0 +1,12 @@
+# Mots courants qui ne sont JAMAIS, à eux seuls, un nom de personne ou de société.
+# Complète la liste livrée avec l'application (Montant, Créance, Objet, LRAR, IBAN…).
+# Un mot par ligne, ou plusieurs séparés par des espaces. Casse et accents indifférents.
+# Redémarrer le service après modification : sudo systemctl restart anonymiseur
+#
+# À utiliser quand un mot ordinaire de vos dossiers ressort à tort en [PERSONNE_n] ou [SOCIETE_n].
+# Un vrai nom qui serait aussi un mot courant reste masqué s'il est précédé d'une civilité
+# (« M. Bureau ») ou imposé dans toujours_masquer.txt.
+#
+# Exemples (retirez le # pour activer) :
+# tantième tantièmes
+# millièmes

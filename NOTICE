@@ -1,5 +1,5 @@
-AxiorHub Pseudonymisation Claude - Créé par Timo RAINIO Avocat
-Copyright (C) 2026 Timo RAINIO
+AxiorHub Pseudonymisation Claude - Créée par Timo Rainio Avocat
+Copyright (C) 2026 Timo Rainio
 
 Ce programme est un logiciel libre : vous pouvez le redistribuer et/ou le modifier
 selon les termes de la GNU Affero General Public License telle que publiée par la
@@ -17,6 +17,9 @@ Article 13 de l'AGPL : si vous modifiez ce programme et le mettez à disposition
 d'utilisateurs par un réseau, vous devez leur offrir l'accès au code source
 correspondant de votre version modifiée.
 
-La mention « AxiorHub Pseudonymisation Claude - Créé par Timo RAINIO Avocat » doit
-être conservée dans les versions dérivées, conformément à l'article 7(b) et 7(c) de
-la licence.
+Conditions supplémentaires (article 7, b et c, de l'AGPL) :
+la mention « AxiorHub Pseudonymisation Claude - Créée par Timo Rainio Avocat » doit
+être conservée dans toute copie et toute version dérivée de ce programme, dans ses
+fichiers sources comme dans les mentions légales qu'il affiche (description de
+l'extension, outil etat_anonymiseur). Une version modifiée doit être signalée comme
+telle et ne doit pas être présentée comme la version d'origine.

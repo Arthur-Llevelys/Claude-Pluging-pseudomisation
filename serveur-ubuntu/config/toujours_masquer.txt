@@ -1,0 +1,6 @@
+# Termes à TOUJOURS masquer, dans tous les dossiers (un par ligne).
+# Format : TYPE: valeur   (TYPE parmi PERSONNE, SOCIETE, ADRESSE, AUTRE…)  ou simplement la valeur (type AUTRE).
+# Pour des termes propres à un seul dossier, utilisez plutôt le champ « Termes à masquer en plus ».
+# Exemples :
+# SOCIETE: Alpha Conseil
+# PERSONNE: Dupont

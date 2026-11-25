@@ -1,0 +1,17 @@
+# Sigles courants qui ne sont jamais un nom de famille en capitales ni une société.
+# (« Son IBAN », « Votre RIB », « Voir PJ » ne sont pas des « Prénom NOM ».)
+# Pour en ajouter : /etc/anonymiseur/mots_courants.txt
+
+# --- identifiants et banque
+IBAN BIC RIB SWIFT SEPA SIREN SIRET RCS TVA NIR NIF KBIS APE NAF INSEE URSSAF RNE RNCS BODACC
+
+# --- courrier et procédure
+LRAR LR AR RAR PJ PS NB CC CCI RE TR FW FWD RDV SMS URL PDF RG TJ TC TGI TI CPH CA CE TA CAA
+JEX JAF JLD JCP JME CPC CPP CGI CGV CGU RGPD CNIL DPO PV AG AGO AGE CSE CDD CDI RH DRH DG PDG
+DAF DSI SAV HT TTC TTC EUR USD CHF GBP
+
+# --- copropriété, immobilier, assurance
+SDC ASL AFUL SCI HLM VEFA DPE ERP PLU POS SHON SRU ALUR ELAN MRH RC DO PNO
+
+# --- divers
+OK KO NA ND NC FR UE EU ONU OTAN

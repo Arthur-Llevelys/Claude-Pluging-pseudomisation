@@ -1,0 +1,10 @@
+# Villes et lieux qui ne sont JAMAIS, à eux seuls, un nom de personne ou de société.
+# Complète la liste livrée avec l'application (grandes villes, sièges de juridiction, régions).
+# Un lieu par ligne. Casse, accents et tirets indifférents.
+# Redémarrer le service après modification : sudo systemctl restart anonymiseur
+#
+# La ville reste masquée lorsqu'elle fait partie d'une adresse (« 12 rue des Tanneurs, 69007 Lyon »).
+#
+# Exemples (retirez le # pour activer) :
+# Sainte-Foy-lès-Lyon
+# Tassin-la-Demi-Lune

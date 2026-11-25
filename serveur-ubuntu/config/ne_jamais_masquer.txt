@@ -1,0 +1,15 @@
+# Termes à ne JAMAIS masquer (un par ligne, comparaison insensible à la casse et aux accents).
+# Utile pour les faux positifs récurrents : institutions, lieux, votre propre nom si vous le souhaitez.
+# Redémarrer le service après modification : sudo systemctl restart anonymiseur
+Cour de cassation
+Conseil d'État
+Tribunal judiciaire
+Tribunal de commerce
+Cour d'appel
+Code civil
+Code de commerce
+Barreau de Lyon
+Légifrance
+# Exemple : décommentez pour ne pas masquer vos propres coordonnées professionnelles
+# Maître Claire Exemple
+# 1 rue de l'Exemple 69000 LYON
