@@ -85,10 +85,10 @@ Détails et mesures : [`prototype-autonome/RESULTATS.md`](prototype-autonome/RES
 
 1. **Claude Desktop** installé et connecté.
 
-2. Téléchargez [`paquets/anonymiseur-cabinet-1.6.1.mcpb`](paquets/) puis, dans Claude Desktop : Paramètres (`Ctrl` + `,`)
+2. **Téléchargez** [`paquets/anonymiseur-cabinet-1.6.1.mcpb`](paquets/) puis, **dans Claude Desktop** : Paramètres (`Ctrl` + `,`)
    → **Extensions** → glissez le fichier dans la fenêtre et validez l'installation.
 
-3. Dans les réglages de l'extension :
+3. **Dans les réglages de l'extension :**
    - **Dossier racine de vos dossiers** : le dossier qui contient vos affaires ;
    - cochez **Moteur local (sans serveur)** ;
    - facultatif : dossier de vos modèles Word, messagerie IMAP (le mot de passe est stocké chiffré par Claude Desktop).
