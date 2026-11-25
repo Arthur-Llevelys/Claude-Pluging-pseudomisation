@@ -5,7 +5,9 @@
 **[Télécharger](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/releases/download/v1.6.1/anonymiseur-cabinet-1.6.1.mcpb)**
 
 Extension pour **Claude Desktop** qui permet de travailler avec Claude sur des dossiers clients **sans que les données
-personnelles quittent votre poste**. Noms, sociétés, adresses, dates et lieux de naissance, SIREN/SIRET, TVA, IBAN, NIR,
+personnelles quittent votre poste**. 
+
+Noms, sociétés, adresses, dates et lieux de naissance, SIREN/SIRET, TVA, IBAN, NIR,
 e-mails et téléphones sont remplacés par des marqueurs (`[PERSONNE_1]`, `[SOCIETE_2]`, `[ADRESSE_1]`…) avant que Claude ne
 lise quoi que ce soit ; les documents produits par Claude sont ensuite ré-identifiés sur votre poste, avec les vraies
 données, directement dans le dossier de l'affaire.
@@ -49,16 +51,18 @@ données réelles. Le texte ré-identifié est écrit sur votre poste ou dans le
    - des **règles** éprouvées (formats d'identifiants avec contrôle de clé, adresses, civilités, sociétés, montants et
      références juridiques protégés…) ;
    - un **petit modèle de langue local via [Ollama](https://ollama.com)** pour reconnaître les noms de personnes et de
-     sociétés sans indice formel (« Karim Benali confirme… », « Lumicor a cessé les paiements ») ;
+     sociétés sans indice formel (« Karim Marchand confirme… », « la SAS Lumicor a cessé les paiements ») ;
    - une **table de correspondance chiffrée par affaire** (AES-256-GCM), dont la clé est protégée par Windows (DPAPI).
 2. **Serveur d'anonymisation** (dossier `serveur-ubuntu/`) — pour un cabinet qui dispose d'un serveur Linux : mêmes
    règles, reconnaissance des noms par spaCy, OCR par ocrmypdf, interface web. Les deux moteurs donnent des résultats
    identiques (vérifié par `tests/comparer-moteurs.js`).
 
-### Pourquoi un petit modèle avec Ollama, plutôt que les règles seules ?
+### Pourquoi un petit modèle avec Ollama, plutôt que les règles seules de l'extension ?
 
-Les règles ne voient un nom que s'il a une forme reconnaissable (« M. Dupont », « Jean DUPONT »). Dans un courriel ou un
-compte rendu, les noms apparaissent souvent nus : sans modèle de langue, ils **fuiraient**. Sur nos exemples fictifs :
+Les règles ne voient un nom que s'il a une forme reconnaissable (« M. Dupont », « Jean DUPONT »). 
+Dans un courriel ou un compte rendu, les noms apparaissent souvent nus : sans modèle de langue, ils **fuiraient**. 
+
+Sur nos exemples fictifs :
 
 | Configuration | Données restées en clair | Mots masqués à tort |
 |---|---|---|
@@ -101,10 +105,10 @@ cd serveur-ubuntu && python -m tests.test_moteur
 
 ## Limites
 
-- Ce que vous tapez ou collez directement dans la conversation n'est pas filtré : passez par « lis le presse-papiers ».
+- **Ce que vous tapez ou collez directement dans la conversation n'est pas filtré : passez par « lis le presse-papiers ».**
 - La reconnaissance des noms par un petit modèle prend environ 15 à 30 s par page sur un portable sans carte graphique.
 - L'OCR peut déformer un nom propre, qui échappe alors au masquage : relisez les PDF scannés.
-- Un PDF contenant des marqueurs ne peut pas être ré-identifié : faites produire un Word.
+- Un PDF contenant déjà des marqueurs ne peut pas être ré-identifié : faites produire un Word.
 
 ## Licence
 
