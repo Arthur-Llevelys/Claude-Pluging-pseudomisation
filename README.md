@@ -104,6 +104,25 @@ Détails et mesures : [`prototype-autonome/RESULTATS.md`](prototype-autonome/RES
    (Windows : programme d'installation « [Tesseract at UB Mannheim](https://tesseractocr.org/fr/install/) », en cochant la langue
    française).
 
+   Pour ajouter le français dans Tesseract
+   - Ouvrez cette page : https://github.com/tesseract-ocr/tessdata/raw/main/fra.traineddata
+   - Elle télécharge directement le fichier fra.traineddata.
+   - Copiez le fichier téléchargé dans :
+   ```
+   C:\Program Files\Tesseract-OCR\tessdata
+   ```
+   Si Windows demande une autorisation pour coller dans Program Files, cliquez sur Continuer et validez avec votre compte administrateur.
+   Fermez puis rouvrez PowerShell, puis tapez :
+   ```
+   tesseract --list-langs
+   ```
+   Vous devriez maintenant voir :
+   ```
+   eng
+   fra
+   osd
+   ```
+   
 8. Ouvrez une nouvelle conversation et dites : « Vérifie l'anonymiseur ».
 
 Serveur Linux (facultatif) : voir [`serveur-ubuntu/LISEZMOI.md`](serveur-ubuntu/LISEZMOI.md) (`sudo bash install.sh`).
