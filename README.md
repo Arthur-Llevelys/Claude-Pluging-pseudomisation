@@ -64,7 +64,7 @@ données réelles. Le texte ré-identifié est écrit sur votre poste ou dans le
 Les règles ne voient un nom que s'il a une forme reconnaissable (« M. Dupont », « Jean DUPONT » ...etc.). 
 Dans un courriel ou un compte rendu, les noms apparaissent parfois nus : sans modèle de langue, ils **fuiraient**. 
 
-**Sur les test avec exemples fictifs :**
+**Sur les tests, avec exemples fictifs :**
 
 | Configuration | Données restées en clair | Mots masqués à tort |
 |---|---|---|
