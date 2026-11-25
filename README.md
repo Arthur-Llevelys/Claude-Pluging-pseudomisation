@@ -26,7 +26,7 @@ Courrier enregistré      : « Madame Hélène Vasseur… » (Word, dans le doss
 > - Laissez les pièces dans le dossier de l'affaire (ou demandez à Claude « importe les pièces »)
 > et demandez à Claude de les lire ;
 > - Pour un texte, copiez-le (Control + C ou Séléctionner le texte et "Copier"), puis demandez à Claude de « lire le presse-papiers ».
-
+---
 ## Comment utiliser l'extension avec Claude
 
 | Vous dites à Claude | Ce qui se passe sur votre poste |
