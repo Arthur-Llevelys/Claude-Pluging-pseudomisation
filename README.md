@@ -4,8 +4,7 @@
 ## 📦 [Télécharger](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/releases/download/v1.6.1/anonymiseur-cabinet-1.6.1.mcpb)
 
 
-### Extension pour **Claude Desktop** qui permet de travailler avec Claude sur des dossiers clients **sans que les données
-personnelles quittent votre poste**. 
+### Extension pour Claude Desktop qui permet de travailler avec Claude sur des dossiers clients sans que les données personnelles quittent votre poste. 
 
 Noms, sociétés, adresses, dates et lieux de naissance, SIREN/SIRET, TVA, IBAN, NIR,
 e-mails et téléphones sont remplacés par des marqueurs (`[PERSONNE_1]`, `[SOCIETE_2]`, `[ADRESSE_1]`…) avant que Claude ne
