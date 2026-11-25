@@ -2,7 +2,7 @@
 
 **Créée par Timo Rainio Avocat** · Logiciel libre sous licence [GNU AGPL v3 ou ultérieure](LICENSE) · Windows, macOS, Linux
 
-**[Télécharger](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/releases/download/v1.6.1/anonymiseur-cabinet-1.6.1.mcpb)**
+## 📦 [Télécharger](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/releases/download/v1.6.1/anonymiseur-cabinet-1.6.1.mcpb)
 
 Extension pour **Claude Desktop** qui permet de travailler avec Claude sur des dossiers clients **sans que les données
 personnelles quittent votre poste**. 
@@ -47,51 +47,63 @@ données réelles. Le texte ré-identifié est écrit sur votre poste ou dans le
 
 ## Deux façons de faire tourner la détection
 
-1. **Moteur local (recommandé pour un cabinet sans serveur)** — tout se passe dans l'extension, sur le poste :
+1. **Via la moteur local (recommandé pour un cabinet sans serveur)** — tout se passe dans l'extension, sur le poste :
    - des **règles** éprouvées (formats d'identifiants avec contrôle de clé, adresses, civilités, sociétés, montants et
      références juridiques protégés…) ;
-   - un **petit modèle de langue local via [Ollama](https://ollama.com)** pour reconnaître les noms de personnes et de
-     sociétés sans indice formel (« Karim Marchand confirme… », « la SAS Lumicor a cessé les paiements ») ;
+   - Optionnel : vous pouvez ajouter un **petit modèle de langue local via [Ollama](https://ollama.com)** pour
+     reconnaître les noms de personnes et de sociétés sans indice formel (« Karim Marchand confirme… »,
+     « la SAS Lumicor a cessé les paiements ») ;
    - une **table de correspondance chiffrée par affaire** (AES-256-GCM), dont la clé est protégée par Windows (DPAPI).
-2. **Serveur d'anonymisation** (dossier `serveur-ubuntu/`) — pour un cabinet qui dispose d'un serveur Linux : mêmes
+     
+2. **Via un serveur d'anonymisation** (dossier `serveur-ubuntu/`) — pour un cabinet qui dispose d'un serveur Linux : mêmes
    règles, reconnaissance des noms par spaCy, OCR par ocrmypdf, interface web. Les deux moteurs donnent des résultats
    identiques (vérifié par `tests/comparer-moteurs.js`).
 
-### Pourquoi un petit modèle avec Ollama, plutôt que les règles seules de l'extension ?
+### Pourquoi ajouter un petit modèle avec Ollama, plutôt qu'utiliser les règles seules de l'extension ?
 
-Les règles ne voient un nom que s'il a une forme reconnaissable (« M. Dupont », « Jean DUPONT »). 
-Dans un courriel ou un compte rendu, les noms apparaissent souvent nus : sans modèle de langue, ils **fuiraient**. 
+Les règles ne voient un nom que s'il a une forme reconnaissable (« M. Dupont », « Jean DUPONT » ...etc.). 
+Dans un courriel ou un compte rendu, les noms apparaissent parfois nus : sans modèle de langue, ils **fuiraient**. 
 
-Sur nos exemples fictifs :
+**Sur les test avec exemples fictifs :**
 
 | Configuration | Données restées en clair | Mots masqués à tort |
 |---|---|---|
 | Règles seules | 12 sur 47 | 0 |
 | Règles + petit modèle de 4 milliards de paramètres (Ollama) | 0 à 1 sur 47 | 0 |
 
-Pourquoi un **petit** modèle (3 à 4 milliards de paramètres, environ 2,5 à 3 Go) : il tourne sur un ordinateur ordinaire,
-sans carte graphique, et il suffit pour repérer des noms. Pourquoi **Ollama** : le modèle tourne sur votre poste (ou sur
-une machine de votre réseau), gratuitement, sans abonnement ni envoi de données. L'extension refuse toute adresse Internet
-et les modèles « cloud » d'Ollama, et ne retient un nom proposé par le modèle que s'il figure mot pour mot dans le texte.
+Pourquoi un **petit** modèle LLM (3 à 4 milliards de paramètres, environ 2,5 à 3 Go) : il tourne sur un ordinateur ordinaire,
+sans carte graphique, et il suffit pour repérer des noms. 
+
+Pourquoi **Ollama** : le modèle tourne sur votre poste (ou sur une machine de votre réseau), gratuitement, sans abonnement 
+ni envoi de données. L'extension refuse toute adresse Internet et les modèles « cloud » d'Ollama, et ne retient un nom 
+proposé par le modèle que s'il figure mot pour mot dans le texte.
+
 Détails et mesures : [`prototype-autonome/RESULTATS.md`](prototype-autonome/RESULTATS.md).
 
 ## Installation (Windows)
 
 1. **Claude Desktop** installé et connecté.
+
 2. Téléchargez [`paquets/anonymiseur-cabinet-1.6.1.mcpb`](paquets/) puis, dans Claude Desktop : Paramètres (`Ctrl` + `,`)
    → **Extensions** → glissez le fichier dans la fenêtre et validez l'installation.
+
 3. Dans les réglages de l'extension :
    - **Dossier racine de vos dossiers** : le dossier qui contient vos affaires ;
    - cochez **Moteur local (sans serveur)** ;
    - facultatif : dossier de vos modèles Word, messagerie IMAP (le mot de passe est stocké chiffré par Claude Desktop).
-4. **Ollama** (reconnaissance des noms) : installez-le depuis [ollama.com](https://ollama.com/download), puis dans un terminal :
+
+4. **Ollama** (reconnaissance des noms - facultatif) : installez-le depuis [ollama.com](https://ollama.com/download), puis
+   dans un terminal :
    ```
    ollama pull ministral-3:3b
    ```
    Le modèle (2,8 Go) n'est téléchargé qu'une fois. Sans Ollama, l'extension fonctionne avec les règles seules et vous le signale.
-5. Facultatif, pour les PDF scannés : **Tesseract** (Windows : programme d'installation « Tesseract at UB Mannheim », en
-   cochant la langue française).
-6. Ouvrez une nouvelle conversation et dites : « Vérifie l'anonymiseur ».
+
+6. Facultatif, pour les PDF scannés : **Tesseract**
+   (Windows : programme d'installation « [Tesseract at UB Mannheim](https://tesseractocr.org/fr/install/) », en cochant la langue
+   française).
+
+8. Ouvrez une nouvelle conversation et dites : « Vérifie l'anonymiseur ».
 
 Serveur Linux (facultatif) : voir [`serveur-ubuntu/LISEZMOI.md`](serveur-ubuntu/LISEZMOI.md) (`sudo bash install.sh`).
 
