@@ -72,7 +72,7 @@ Détails et mesures : [`prototype-autonome/RESULTATS.md`](prototype-autonome/RES
 ## Installation (Windows)
 
 1. **Claude Desktop** installé et connecté.
-2. Téléchargez [`paquets/anonymiseur-cabinet-1.6.0.mcpb`](paquets/) puis, dans Claude Desktop : Paramètres (`Ctrl` + `,`)
+2. Téléchargez [`paquets/anonymiseur-cabinet-1.6.1.mcpb`](paquets/) puis, dans Claude Desktop : Paramètres (`Ctrl` + `,`)
    → **Extensions** → glissez le fichier dans la fenêtre et validez l'installation.
 3. Dans les réglages de l'extension :
    - **Dossier racine de vos dossiers** : le dossier qui contient vos affaires ;

@@ -68,7 +68,7 @@ const crypto = require("crypto");
 const { spawn } = require("child_process");
 const { fileURLToPath } = require("url");
 
-const VERSION = "1.6.0";
+const VERSION = "1.6.1";
 const SERVEUR = (process.env.ANON_SERVEUR || "http://127.0.0.1:8765").replace(/\/+$/, "");
 const CLE = process.env.ANON_CLE || "";
 const DOSSIER_TRAVAIL = process.env.ANON_DOSSIER_TRAVAIL || "";
