@@ -1,10 +1,9 @@
 # AxiorHub Pseudonymisation Claude
 
 **Créée par Timo Rainio Avocat** · Logiciel libre sous licence [GNU AGPL v3 ou ultérieure](LICENSE) · Windows, macOS, Linux
-
+<div align="center">
 ## 📦 [Télécharger](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/releases/download/v1.6.1/anonymiseur-cabinet-1.6.1.mcpb)
-
----
+</div>
 ### Extension pour **Claude Desktop** qui permet de travailler avec Claude sur des dossiers clients **sans que les données
 personnelles quittent votre poste**. 
 
@@ -44,8 +43,9 @@ Courrier enregistré      : « Madame Hélène Vasseur… » (Word, dans le doss
 PDF scannés lus par reconnaissance de caractères (OCR), Word, OpenDocument, courriels, RTF, HTML et texte pris en charge.
 Un journal local trace chaque opération **sans aucune donnée en clair**.
 
-**Règle absolue du projet** : aucun outil ne renvoie à Claude un texte, un nom de fichier ou un chemin contenant des
+**Règle du projet :** aucun outil ne renvoie à Claude un texte, un nom de fichier ou un chemin contenant des
 données réelles. Le texte ré-identifié est écrit sur votre poste ou dans le presse-papiers, jamais dans la conversation.
+
 ---
 ## Deux façons de faire tourner la détection
 
@@ -60,6 +60,7 @@ données réelles. Le texte ré-identifié est écrit sur votre poste ou dans le
 2. **Via un serveur d'anonymisation** (dossier `serveur-ubuntu/`) — pour un cabinet qui dispose d'un serveur Linux : mêmes
    règles, reconnaissance des noms par spaCy, OCR par ocrmypdf, interface web. Les deux moteurs donnent des résultats
    identiques (vérifié par `tests/comparer-moteurs.js`).
+
 ---
 ### Pourquoi ajouter un petit modèle avec Ollama, plutôt qu'utiliser les règles seules de l'extension ?
 
@@ -81,6 +82,7 @@ ni envoi de données. L'extension refuse toute adresse Internet et les modèles 
 proposé par le modèle que s'il figure mot pour mot dans le texte.
 
 Détails et mesures : [`prototype-autonome/RESULTATS.md`](prototype-autonome/RESULTATS.md).
+
 ---
 ## Installation (Windows)
 
@@ -127,6 +129,7 @@ Détails et mesures : [`prototype-autonome/RESULTATS.md`](prototype-autonome/RES
 8. Ouvrez une nouvelle conversation et dites : « Vérifie l'anonymiseur ».
 
 Serveur Linux (facultatif) : voir [`serveur-ubuntu/LISEZMOI.md`](serveur-ubuntu/LISEZMOI.md) (`sudo bash install.sh`).
+
 ---
 ## Vérifications
 
@@ -135,6 +138,7 @@ node --test tests/extension.test.js      # 32 tests de l'extension (données fic
 node tests/comparer-moteurs.js           # moteur local et serveur : résultats identiques
 cd serveur-ubuntu && python -m tests.test_moteur
 ```
+
 ---
 ## Limites
 
@@ -142,6 +146,7 @@ cd serveur-ubuntu && python -m tests.test_moteur
 - La reconnaissance des noms par un petit modèle prend environ 15 à 30 s par page sur un portable sans carte graphique.
 - L'OCR peut déformer un nom propre, qui échappe alors au masquage : relisez les PDF scannés.
 - Un PDF contenant déjà des marqueurs ne peut pas être ré-identifié : faites produire un Word.
+
 ---
 ## Licence
 
