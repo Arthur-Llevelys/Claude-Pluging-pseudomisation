@@ -27,7 +27,7 @@ Courrier enregistré      : « Madame Hélène Vasseur… » (Word, dans le doss
 > et demandez à Claude de les lire ;
 > - Pour un texte, copiez-le (Control + C ou Séléctionner le texte et "Copier"), puis demandez à Claude de « lire le presse-papiers ».
 
-## Ce que fait l'extension
+## Comment utiliser l'extension avec Claude
 
 | Vous dites à Claude | Ce qui se passe sur votre poste |
 |---|---|
