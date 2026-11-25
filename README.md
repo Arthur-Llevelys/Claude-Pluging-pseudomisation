@@ -51,8 +51,8 @@ données réelles. Le texte ré-identifié est écrit sur votre poste ou dans le
    - des **règles** éprouvées (formats d'identifiants avec contrôle de clé, adresses, civilités, sociétés, montants et
      références juridiques protégés…) ;
    - Optionnel : vous pouvez ajouter un **petit modèle de langue local via [Ollama](https://ollama.com)** pour
-     reconnaître les noms de personnes et de sociétés sans indice formel (« Karim Marchand confirme… »,
-     « la SAS Lumicor a cessé les paiements ») ;
+     reconnaître les noms de personnes et de sociétés sans indice formel (« Marine Marchande confirme… »,
+     « la SAS Lumière a cessé les paiements ») ;
    - une **table de correspondance chiffrée par affaire** (AES-256-GCM), dont la clé est protégée par Windows (DPAPI).
      
 2. **Via un serveur d'anonymisation** (dossier `serveur-ubuntu/`) — pour un cabinet qui dispose d'un serveur Linux : mêmes
