@@ -16,6 +16,11 @@ Courrier enregistré      : « Madame Hélène Vasseur… » (Word, dans le doss
 
 > Pensée pour les avocats et les professions tenues au secret : l'outil limite ce qui est transmis à l'IA, il ne
 > remplace pas votre vigilance. Aucun détecteur n'est exhaustif : relisez avant tout envoi.
+>
+> **Ce qui n'est pas filtré** : ce que vous tapez ou collez directement dans la conversation, et les fichiers que vous
+> **joignez ou glissez dans la zone de saisie** de Claude — ils partent tels quels. Laissez les pièces dans le dossier
+> de l'affaire (ou « importe les pièces ») et demandez à Claude de les lire ; pour un texte, copiez-le puis demandez
+> à Claude de « lire le presse-papiers ».
 
 ## Ce que fait l'extension
 
