@@ -12,9 +12,9 @@ lise quoi que ce soit ; les documents produits par Claude sont ensuite ré-ident
 données, directement dans le dossier de l'affaire.
 
 ```
-Pièce sur votre poste : « Madame Hélène Vasseur, 14 rue des Tanneurs, 69005 Lyon, IBAN FR76 3000 6000 0112 3456 7890 189… »
-Ce que Claude lit       : « Madame [PERSONNE_1], [ADRESSE_1], IBAN [IBAN_1]… »
-Courrier enregistré      : « Madame Hélène Vasseur… » (Word, dans le dossier de l'affaire, mise en forme de votre modèle)
+Texte présent dans un document sur votre poste : « Madame Hélène Vasseur, 14 rue des Tanneurs, 69005 Lyon, IBAN FR76 3000 6000 0112 3456 7890 189… »
+Avec cette extension, ce que Claude lit : « Madame [PERSONNE_1], [ADRESSE_1], IBAN [IBAN_1]… »
+Courrier enregistré avec les données restituées : « Madame Hélène Vasseur… » (Word, dans le dossier de l'affaire, mise en forme de votre modèle)
 ```
 
 > **Extension Claude pensée pour les avocats et les professions tenues au secret** . L'outil limite ce qui est transmis à l'IA (il "pseudomise", il n'anonymise pas), il ne
