@@ -22,13 +22,13 @@ Courrier enregistré      : « Madame Hélène Vasseur… » (Word, dans le doss
 >
 > **Comment ça fonctionne ?**
 >
-> - **Ne pas faire :** taper une instruction ou copier/collez un texte directement dans la conversation de Claude Desktop ou joindre
+> - **Ne pas faire :** taper une instruction ou copier/coller un texte directement dans la conversation de Claude Desktop ou joindre
 >  ou glisser des fichiers dans la zone de saisie de Claude — ils partent tels quels à Anthropic ;
-> - **Ce qu'il faut faire :** Il faut laissez les pièces dans le dossier dédié à l'affaire et demandez à Claude : « Choisis le dossier de l'affaire »
+> - **Ce qu'il faut faire :** Il faut laisser les pièces dans le dossier dédié à l'affaire et demander à Claude : « Choisis le dossier de l'affaire »
 >   ou : « Ouvre un nouveau dossier » ;
 > - **Pour un texte**, il faut soit sélectionner le texte, copiez le texte ( **Ctrl + C** ) , puis demandez à Claude de « lire le presse-papiers ».
 >   soit depuis la version 1.7.0 : sélectionner le texte à copier, copiez le texte ( **Ctrl + C** ) puis coller le dans
->   la case des instructions de Claude Desktop en appuyant simultanément sur :  **Ctrl + Alt + Maj + V** (« Coller pseudonymisé ») ;
+>   la case des instructions de Claude Desktop en appuyant simultanément sur :  **Ctrl + Alt + Maj + V** (« cela colle le texte pseudonymisé ») ;
 > - **Pour un fichier**, effectuer un clic droit → **Envoyer vers → « Anonymiseur - copie pseudonymisée »**, puis glissez la copie dans Claude.
 ---
 ## Comment utiliser l'extension avec Claude
