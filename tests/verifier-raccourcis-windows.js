@@ -126,6 +126,15 @@ async function main() {
     const contenu = copies.length ? fs.readFileSync(path.join(affaire, copies[0]), "utf8") : "";
     verifier(copies.length === 1 && /^\[PERSONNE_\d+\] écrit à \[SOCIETE_\d+\]\.$/.test(contenu) && /1 copie\(s\) pseudonymisée\(s\)/.test(r.stdout),
       `« Envoyer vers » : copie pseudonymisée créée (${copies[0] || "aucune"})`);
+
+    // 5. « Envoyer vers → travailler dans ce dossier » (1.8.0)
+    verifier(fs.existsSync(path.join(sendTo, "Anonymiseur - travailler dans ce dossier.lnk")), "raccourci « travailler dans ce dossier » créé");
+    const autre = path.join(path.dirname(affaire), "Martin - licenciement");
+    fs.mkdirSync(autre, { recursive: true });
+    const r2 = await executer("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "--dossier", autre], { ANON_ENVOI_SILENCIEUX: "1" });
+    const courantApres = (JSON.parse(fs.readFileSync(etat, "utf8")).courant || {}).chemin;
+    verifier(/Dossier de travail de Claude/.test(r2) && courantApres === fs.realpathSync(autre),
+      "« travailler dans ce dossier » : dossier courant défini sans fenêtre");
   } catch (e) {
     ok = false;
     console.log("ÉCHEC exception : " + e.message);

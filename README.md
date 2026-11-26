@@ -1,7 +1,7 @@
 # AxiorHub : Extension de pseudonymisation dans Claude Desktop
 **Créée par Timo Rainio Avocat** · Logiciel libre sous licence [GNU AGPL v3 ou ultérieure](LICENSE) · Windows, macOS, Linux
 
-## 📦 [Télécharger](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/raw/main/paquets/anonymiseur-cabinet-1.7.0.mcpb)
+## 📦 [Télécharger](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/raw/main/paquets/anonymiseur-cabinet-1.8.0.mcpb)
 
 
 ### Extension pour Claude Desktop qui permet de travailler avec Claude sur des dossiers clients sans que les données personnelles quittent votre poste. 
@@ -38,6 +38,7 @@ Courrier enregistré avec les données restituées : « Madame Hélène Vasseur�
 |---|---|
 | « Ouvre un nouveau dossier » | Dossier créé sous une référence neutre (`2026-11-25-01`) ; le libellé réel se tape dans une fenêtre locale |
 | « Choisis le dossier de l'affaire » | Vous désignez le dossier dans une fenêtre ; les pièces sont lues **sur place**, sans copie |
+| « Travaille dans ce dossier » ou clic droit sur le dossier → Envoyer vers → « Anonymiseur - travailler dans ce dossier » | Le dossier devient le dossier de travail sans fenêtre ; il est repris ensuite sans rien demander pendant 7 jours |
 | « Importe les pièces » / « les 3 derniers téléchargements » | Copie dans le dossier ; Claude ne voit que des noms de fichiers pseudonymisés |
 | « Lis le presse-papiers » | Le courriel que vous avez copié est enregistré ; Claude n'en reçoit que la version pseudonymisée |
 | « Montre mes derniers courriels », « importe le C2 » | Lecture de votre messagerie (IMAP, lecture seule) ; message et pièces jointes rangés dans le dossier |
@@ -52,6 +53,23 @@ Un journal local trace chaque opération **sans aucune donnée en clair**.
 données réelles. Le texte ré-identifié est écrit sur votre poste ou dans le presse-papiers, jamais dans la conversation.
 
 ---
+## Nouveau dans la 1.8.0 : le dossier de travail se gère tout seul
+
+Vous désignez le dossier d'une affaire une fois ; ensuite, plus aucune fenêtre ne vous le redemande.
+
+| Geste | Ce qui se passe |
+|---|---|
+| « Choisis le dossier de l'affaire » (première fois) | Une fenêtre s'ouvre ; le dossier choisi devient le **dossier de travail** |
+| Les fois suivantes | Claude reprend ce dossier **sans rien demander**, pendant 7 jours après sa dernière utilisation (réglage « Durée de mémoire du dossier courant ») |
+| « Change de dossier » | La fenêtre s'ouvre de nouveau pour désigner une autre affaire |
+| « Importe les pièces » et vous choisissez des fichiers | Leur dossier devient le dossier de travail : les fichiers déjà rangés dans vos dossiers d'affaires sont **lus sur place, sans copie** ; seuls ceux venus d'ailleurs (Téléchargements, bureau…) sont copiés dans le dossier de travail |
+| Clic droit sur un dossier (ou un fichier) → **Envoyer vers → « Anonymiseur - travailler dans ce dossier »** | Le dossier devient le dossier de travail de Claude, sans aucune fenêtre ; demandez ensuite « liste les pièces » |
+| Clic droit sur un fichier → **Envoyer vers → « Anonymiseur - copie pseudonymisée »** | En plus de la copie, le dossier du fichier devient le dossier de travail |
+
+Les livrables sont toujours enregistrés dans le dossier d'origine des pièces. Un sous-dossier d'une affaire créée par
+l'extension (« Pièces », etc.) est rattaché à l'affaire : mêmes marqueurs, même table de correspondance.
+Claude ne voit toujours ni le nom réel du dossier ni son chemin.
+
 ## Nouveau dans la 1.7.0 : coller pseudonymisé et « Envoyer vers »
 
 Ce que vous tapez, collez ou glissez dans la zone de saisie de Claude part tel quel : aucune extension ne peut
@@ -110,7 +128,7 @@ Détails et mesures : [`prototype-autonome/RESULTATS.md`](prototype-autonome/RES
 
 1. **Claude Desktop** installé et connecté.
 
-2. **Téléchargez** [`paquets/anonymiseur-cabinet-1.7.0.mcpb`](paquets/) puis, **dans Claude Desktop** : Paramètres (`Ctrl` + `,`)
+2. **Téléchargez** [`paquets/anonymiseur-cabinet-1.8.0.mcpb`](paquets/) puis, **dans Claude Desktop** : Paramètres (`Ctrl` + `,`)
    → **Extensions** → glissez le fichier dans la fenêtre et validez l'installation.
 
 3. **Dans les réglages de l'extension :**

@@ -218,13 +218,13 @@ test("fenêtre de sélection : dossier hors racine autorisé par le geste de l'u
   assert.match(annule.texte, /sans choisir de dossier/);
 
   fs.writeFileSync(j.selection, j.dehors, "utf8");
-  const dehors = await client.outil("choisir_dossier");
+  const dehors = await client.outil("choisir_dossier", { changer: true });
   assert.equal(dehors.erreur, false);
   const lecture = await client.outil("lire_fichier_anonymise", { fichier: "Courrier Martin.txt" });
   assert.match(lecture.texte, /\[PERSONNE_\d\] écrit à \[SOCIETE_\d\]/);
 
   fs.writeFileSync(j.selection, j.affaire, "utf8");
-  await client.outil("choisir_dossier");
+  await client.outil("choisir_dossier", { changer: true });
   const etat = await client.outil("etat_anonymiseur");
   assert.match(etat.texte, /R1 · .*R2 · /);
   const retour = await client.outil("choisir_dossier", { recent: "R2" });
@@ -265,9 +265,9 @@ test("le dossier courant survit au redémarrage, puis expire", async t => {
   assert.match(liste.texte, /Dossier courant/);
   assert.match(liste.texte, /2 document/);
   c2.fermer();
-  // choix vieux de 13 heures : oublié
+  // choix vieux de 8 jours (mémoire par défaut : 7 jours) : oublié
   const etat = JSON.parse(fs.readFileSync(j.etat, "utf8"));
-  etat.courant.utilise_le = etat.courant.choisi_le = Date.now() - 13 * 3600 * 1000;
+  etat.courant.utilise_le = etat.courant.choisi_le = Date.now() - 8 * 24 * 3600 * 1000;
   fs.writeFileSync(j.etat, JSON.stringify(etat), "utf8");
   const c3 = new Client(env);
   t.after(() => c3.fermer());
@@ -471,7 +471,7 @@ test("creer_dossier_affaire : références neutres incrémentées, libellé sais
 
 test("importer_fichiers : fenêtre de sélection et Téléchargements, copie sans écraser, noms pseudonymisés", async t => {
   const { client, j } = await contexte(t);
-  assert.equal((await client.outil("importer_fichiers")).erreur, true, "dossier courant exigé");
+  assert.equal((await client.outil("importer_fichiers", { mode: "telechargements" })).erreur, true, "dossier courant exigé pour les Téléchargements");
   await client.outil("creer_dossier_affaire");
   const courant = fs.readdirSync(j.racine).find(n => /^\d{4}-\d{2}-\d{2}-01$/.test(n));
   const dossier = path.join(j.racine, courant);
@@ -1094,6 +1094,93 @@ test("« Envoyer vers » : copie pseudonymisée créée à côté du fichier, no
   demander("b".repeat(32), [source], Date.now() - 10 * 60000);
   await new Promise(res => setTimeout(res, 2500));
   assert.ok(!fs.existsSync(path.join(envois, "b".repeat(32) + ".resultat.json")), "une demande vieille de 10 minutes n'est pas traitée");
+  aucuneFuite(client, j);
+});
+
+// --------------------------------------------------------------------------- 1.8.0 : dossier fluide
+test("dossier courant repris sans fenêtre ; changer=true pour en désigner un autre ; mémoire réglable", async t => {
+  const { client, j } = await contexte(t);
+  await client.outil("choisir_dossier", { chemin: j.affaire });
+  fs.writeFileSync(j.selection, j.autreAffaire, "utf8");
+  const repris = await client.outil("choisir_dossier");
+  assert.equal(repris.erreur, false);
+  assert.match(repris.texte, /repris sans rien demander/);
+  assert.match((await client.outil("lister_fichiers")).texte, /2 document/, "toujours le premier dossier : aucune fenêtre ouverte");
+  const change = await client.outil("choisir_dossier", { changer: true });
+  assert.equal(change.erreur, false, change.texte);
+  assert.match((await client.outil("lister_fichiers")).texte, /1 document/, "fenêtre ouverte, autre dossier pris");
+  aucuneFuite(client, j);
+});
+
+test("mémoire du dossier courant : durée réglée en heures", async t => {
+  const { client, j, env } = await contexte(t, { env: { ANON_DUREE_DOSSIER_COURANT_H: "2" } });
+  await client.outil("choisir_dossier", { chemin: j.affaire });
+  client.fermer();
+  const etat = JSON.parse(fs.readFileSync(j.etat, "utf8"));
+  etat.courant.utilise_le = etat.courant.choisi_le = Date.now() - 3 * 3600 * 1000;
+  fs.writeFileSync(j.etat, JSON.stringify(etat), "utf8");
+  const c2 = new Client(env);
+  t.after(() => c2.fermer());
+  await c2.init();
+  assert.match((await c2.outil("lister_fichiers")).texte, /Aucun dossier courant/);
+});
+
+test("importer_fichiers : les fichiers désignés définissent le dossier de travail, lus sur place ou copiés", async t => {
+  const { client, j } = await contexte(t);
+  // sans dossier courant : un fichier de l'arborescence du cabinet fixe le dossier, sans copie
+  fs.writeFileSync(j.fichiers, path.join(j.autreAffaire, "Lettre Martin.txt"), "utf8");
+  const r = await client.outil("importer_fichiers");
+  assert.equal(r.erreur, false, r.texte);
+  assert.match(r.texte, /Dossier de travail défini d'après les fichiers/);
+  assert.match(r.texte, /1 fichier\(s\) lu\(s\) sur place, sans copie/);
+  assert.deepEqual(fs.readdirSync(j.autreAffaire), ["Lettre Martin.txt"], "aucune copie");
+  assert.match((await client.outil("lister_fichiers")).texte, /1 document/);
+  // fichier d'une autre affaire du cabinet : bascule vers son dossier
+  fs.writeFileSync(j.fichiers, path.join(j.affaire, "Note Dupont.txt"), "utf8");
+  const r2 = await client.outil("importer_fichiers");
+  assert.match(r2.texte, /Dossier de travail défini d'après les fichiers/);
+  assert.match((await client.outil("lister_fichiers")).texte, /2 document/);
+  // fichier venu d'ailleurs (Téléchargements) : copié dans le dossier courant
+  const telecharge = path.join(j.telechargements, "Assignation Dupont.txt");
+  fs.writeFileSync(telecharge, "Jean Dupont est assigné.", "utf8");
+  fs.writeFileSync(j.fichiers, telecharge, "utf8");
+  const r3 = await client.outil("importer_fichiers");
+  assert.match(r3.texte, /1 fichier\(s\) copié\(s\)/, r3.texte);
+  assert.doesNotMatch(r3.texte, /Dossier de travail défini/);
+  assert.ok(fs.existsSync(path.join(j.affaire, "Assignation Dupont.txt")) && fs.existsSync(telecharge));
+  aucuneFuite(client, j);
+});
+
+test("« Envoyer vers → travailler dans ce dossier » : dossier défini sans fenêtre ; la copie pseudonymisée suit le dossier du fichier", async t => {
+  const envois = fs.mkdtempSync(path.join(os.tmpdir(), "anon-envois-"));
+  t.after(() => fs.rmSync(envois, { recursive: true, force: true }));
+  const { client, j } = await contexte(t, { env: {
+    ANON_RACCOURCIS: "1", ANON_ECOUTEUR_COMMANDE: JSON.stringify([process.execPath, "-e", "process.stdin.resume()"]),
+    ANON_ENVOIS: envois, ANON_SENDTO: "0",
+  } });
+  const demander = (id, mode, fichiers) => fs.writeFileSync(path.join(envois, `${id}.json`), JSON.stringify({ id, mode, quand: Date.now(), fichiers }), "utf8");
+  const resultat = async id => {
+    const p = path.join(envois, id + ".resultat.json");
+    assert.ok(await attendre(() => fs.existsSync(p), 8000), "demande traitée");
+    return JSON.parse(fs.readFileSync(p, "utf8"));
+  };
+  demander("c".repeat(32), "dossier", [j.autreAffaire]);
+  const r = await resultat("c".repeat(32));
+  assert.equal(r.ok, true, r.message);
+  assert.match(r.message, /Dossier de travail de Claude/);
+  const liste = await client.outil("lister_fichiers");
+  assert.match(liste.texte, /1 document/);
+  assert.doesNotMatch(liste.texte, /Martin/, "le nom réel reste sur le poste");
+  // un fichier désigné en mode dossier : son dossier est pris
+  demander("d".repeat(32), "dossier", [path.join(j.affaire, "Note Dupont.txt")]);
+  assert.equal((await resultat("d".repeat(32))).ok, true);
+  assert.match((await client.outil("lister_fichiers")).texte, /2 document/);
+  // copie pseudonymisée depuis l'autre affaire : le dossier courant suit
+  demander("e".repeat(32), "copie", [path.join(j.autreAffaire, "Lettre Martin.txt")]);
+  const r3 = await resultat("e".repeat(32));
+  assert.equal(r3.sorties.length, 1);
+  assert.match(r3.message, /Dossier de travail de Claude/);
+  assert.match((await client.outil("lister_fichiers")).texte, /2 document/, "Lettre + sa copie pseudonymisée");
   aucuneFuite(client, j);
 });
 

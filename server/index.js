@@ -68,7 +68,7 @@ const crypto = require("crypto");
 const { spawn } = require("child_process");
 const { fileURLToPath } = require("url");
 
-const VERSION = "1.7.0";
+const VERSION = "1.8.0";
 const SERVEUR = (process.env.ANON_SERVEUR || "http://127.0.0.1:8765").replace(/\/+$/, "");
 const CLE = process.env.ANON_CLE || "";
 const DOSSIER_TRAVAIL = process.env.ANON_DOSSIER_TRAVAIL || "";
@@ -100,7 +100,7 @@ const EXT_REID_ZIP = new Set([".docx", ".pptx", ".xlsx", ".odt", ".ods", ".odp"]
 const EXT_REID_TEXTE = new Set([".txt", ".md", ".markdown", ".csv", ".tsv", ".html", ".htm", ".xml", ".json", ".tex", ".eml", ".rtf"]);
 const VERSIONS_PROTOCOLE = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 // Le dossier courant est oublié après ce délai sans utilisation (évite d'écrire dans le dossier de la veille)
-const DUREE_COURANT_MS = (parseFloat(process.env.ANON_DUREE_DOSSIER_COURANT_H) || 12) * 3600 * 1000;
+const DUREE_COURANT_MS = (parseFloat(valeurConfig(process.env.ANON_DUREE_DOSSIER_COURANT_H || "")) || 168) * 3600 * 1000;
 // Temps d'attente de la fenêtre de sélection avant de rendre la main à Claude (la fenêtre reste ouverte)
 const ATTENTE_SELECTION_MS = parseInt(process.env.ANON_ATTENTE_SELECTION_MS || "45000", 10) || 45000;
 const DELAI_MAX_SELECTION_MS = 15 * 60 * 1000;
@@ -1042,6 +1042,39 @@ async function compterDocuments(abs) {
   return r;
 }
 
+/** Dossier de travail à retenir pour un dossier désigné : l'affaire entière s'il s'agit d'un sous-dossier d'une affaire créée par l'extension. */
+function dossierDeTravailPour(abs) {
+  const fa = ficheAffaire(abs);
+  return fa ? fa.dossier : abs;
+}
+
+/** Fait d'un dossier désigné par l'utilisateur (fichiers choisis, clic droit) le dossier courant, sans fenêtre. Retourne la fiche. */
+async function definirCourantSilencieux(dossierBrut, source = "selecteur") {
+  const abs = reel(dossierDeTravailPour(reel(dossierBrut) || dossierBrut));
+  if (!abs || !existeDossier(abs)) throw new ErreurOutil("Dossier introuvable sur le poste de l'utilisateur.");
+  if (tropLarge(abs)) throw new ErreurOutil("Ce dossier est trop large (disque entier ou profil utilisateur) pour servir de dossier de travail.");
+  const c = courant();
+  if (c && c.chemin === abs) return c;
+  const ref = refPour(abs);
+  const fiche = enregistrerCourant(abs, ref, await libellePour(abs, ref), source);
+  journaliser("choix_dossier", { ref, source });
+  return fiche;
+}
+
+/** Réponse de choisir_dossier quand le dossier courant est simplement repris. */
+async function texteDossierRepris(c) {
+  toucher(c);
+  const contenu = await compterDocuments(c.chemin);
+  return [
+    `Dossier courant repris sans rien demander : « ${await libelleDe(c)} » — référence d'anonymisation ${c.ref} ` +
+      `(${c.source === "session" ? "dossier de la session en cours" : `choisi ${ilYA(c.choisi_le)}`}).`,
+    `Contenu : ${contenu.fichiers.length}${contenu.tronque ? "+" : ""} document(s), sous-dossiers compris. Lecture sur place ; les livrables seront ` +
+      "enregistrés dans ce dossier.",
+    "Indiquez en une phrase à l'utilisateur le dossier repris. S'il parle d'une autre affaire : choisir_dossier avec changer=true (fenêtre) " +
+      "ou recent=R… ; pour lire des pièces précises : importer_fichiers. Étape suivante : lister_fichiers.",
+  ].join("\n");
+}
+
 /** Enregistre le dossier courant (mémoire + état local) et le place en tête des dossiers récents. */
 function enregistrerCourant(abs, ref, libelle, source) {
   const maintenant = Date.now();
@@ -1129,7 +1162,7 @@ function destination(args) {
     toucher(c);
     return {
       dir: cibleReelle,
-      ou: "dans le dossier courant (le dossier d'origine des pièces)" + (sous.length ? `, sous-dossier « ${sous.join(path.sep)} »` : ""),
+      ou: `dans le dossier courant (le dossier d'origine des pièces) « ${c.libelle || c.ref} »` + (sous.length ? `, sous-dossier « ${sous.join(path.sep)} »` : ""),
       courant: c,
     };
   }
@@ -1712,13 +1745,15 @@ const OUTILS = [
     description:
       "Définit le dossier courant : le dossier du poste de l'utilisateur dans lequel les documents sont lus là où ils se trouvent " +
       "et où les livrables ré-identifiés sont enregistrés. Aucune copie de fichiers n'est nécessaire. " +
-      "Sans argument (à privilégier) : une fenêtre de sélection s'ouvre sur l'écran de l'utilisateur, qui désigne le dossier ; " +
-      "ne lui demandez pas d'écrire un chemin dans la conversation, il contient souvent des noms de clients. " +
+      "Sans argument (à privilégier) : le dossier courant est repris sans rien demander s'il existe ; sinon une fenêtre de sélection s'ouvre " +
+      "sur l'écran de l'utilisateur, qui désigne le dossier. changer=true : ouvre la fenêtre même s'il y a un dossier courant (l'utilisateur " +
+      "passe à une autre affaire). Ne lui demandez pas d'écrire un chemin dans la conversation, il contient souvent des noms de clients. " +
       "Avec chemin : dossier déjà connu de vous, par exemple le dossier de travail d'une session Claude Code ou Cowork. " +
       "Avec recent : un dossier récent (R1, R2… affichés par etat_anonymiseur). Le nom réel du dossier ne vous est jamais communiqué.",
     inputSchema: {
       type: "object",
       properties: {
+        changer: { type: "boolean", description: "Ouvrir la fenêtre pour désigner un autre dossier, même si un dossier courant existe. Défaut : false." },
         chemin: { type: "string", description: "Chemin absolu d'un dossier du poste de l'utilisateur, ou chemin relatif au dossier racine des réglages. Facultatif." },
         recent: { type: "string", description: "Identifiant d'un dossier récent (R1, R2…). Facultatif." },
       },
@@ -1993,12 +2028,15 @@ const INSTRUCTIONS =
   "par des marqueurs entre crochets ([PERSONNE_1], [SOCIETE_1], [ADRESSE_1], [SIRET_1]…). Règles : " +
   "(1) conservez les marqueurs exactement à l'identique dans vos réponses et rédactions (pas de traduction, d'accord ni de reformulation) ; " +
   "(2) ne cherchez jamais à deviner ni à demander les données réelles ; " +
-  "(3) les documents se traitent là où ils se trouvent, sans copie : au début d'un travail, appelez choisir_dossier. Sans argument, une fenêtre " +
-  "s'ouvre sur l'écran de l'utilisateur pour qu'il désigne le dossier (ne lui demandez pas d'écrire le chemin : il contient souvent des noms) ; " +
-  "si vous travaillez dans une session déjà rattachée à un dossier du poste (Claude Code, Cowork), passez ce dossier dans chemin. " +
-  "Le dossier choisi devient le dossier courant : lister_fichiers, lire_fichier_anonymise, enregistrer_document et reidentifier_fichier y travaillent " +
-  "directement, et la référence d'anonymisation de l'affaire est attribuée automatiquement (n'indiquez pas le paramètre dossier). " +
-  "Si le dossier courant a été choisi il y a plus d'une heure ou pour une autre affaire, rappelez choisir_dossier ; " +
+  "(3) les documents se traitent là où ils se trouvent, sans copie. Au début d'un travail, appelez choisir_dossier SANS argument : s'il existe " +
+  "déjà un dossier courant, il est repris sans rien demander à l'utilisateur (dites-lui simplement, en une phrase, quel dossier est repris) ; " +
+  "la fenêtre de sélection ne s'ouvre que s'il n'y a pas encore de dossier courant. Si l'utilisateur parle d'une autre affaire ou demande à changer " +
+  "de dossier, appelez choisir_dossier avec changer=true (fenêtre) ou recent=R2. Ne lui demandez jamais d'écrire un chemin (il contient souvent " +
+  "des noms). Si vous travaillez dans une session déjà rattachée à un dossier du poste (Claude Code, Cowork), passez ce dossier dans chemin. " +
+  "Pour lire des pièces précises, importer_fichiers suffit, même sans dossier courant : le dossier des fichiers que l'utilisateur désigne devient " +
+  "le dossier de travail (les fichiers venant d'ailleurs, comme les Téléchargements, sont copiés dans le dossier en cours). " +
+  "Le dossier courant sert à lister_fichiers, lire_fichier_anonymise, enregistrer_document et reidentifier_fichier, et la référence d'anonymisation " +
+  "de l'affaire est attribuée automatiquement (n'indiquez pas le paramètre dossier) ; " +
   "(4) pour produire un livrable final avec les vraies données, appelez enregistrer_document : le fichier est écrit dans le dossier courant, " +
   "à côté des pièces. Si vous avez créé vous-même un fichier à marqueurs sur le poste de l'utilisateur (docx, etc.), appelez reidentifier_fichier. " +
   "Pour une réponse à coller dans sa messagerie, appelez reidentifier_vers_presse_papiers. Vous ne verrez jamais le contenu ré-identifié ; " +
@@ -2080,7 +2118,10 @@ async function executer(nom, args) {
           if (d.erreur) throw new ErreurOutil(d.erreur);
           return d.texte;
         }
-        const c = courant();
+        // Un dossier courant existe : il est repris sans rien demander (sauf demande explicite de changement)
+        const enCours = courant();
+        if (enCours && !args.changer) return texteDossierRepris(enCours);
+        const c = enCours;
         const initial = (c && c.chemin) || racineConfiguree() || os.homedir();
         const promesse = (async () => {
           let issue;
@@ -2186,7 +2227,8 @@ async function executer(nom, args) {
       const partie = Math.min(Math.max(1, parseInt(args.partie || 1, 10) || 1), total);
       const extrait = texte.slice((partie - 1) * TAILLE_PARTIE, partie * TAILLE_PARTIE);
       const entete = [
-        `Document ${id} — version pseudonymisée (référence d'anonymisation « ${dossier} »), lu sur place.`,
+        `Document ${id} — version pseudonymisée (référence d'anonymisation « ${dossier} »), lu sur place` +
+          (c && dossier === c.ref ? ` dans le dossier « ${c.libelle || c.ref} ».` : "."),
         `Entités remplacées : ${resumeEntites(r.entites)}.`,
         total > 1 ? `Partie ${partie}/${total} — appelez à nouveau avec partie=${partie + 1} pour la suite.` : null,
         ...(r.avertissements || []).map(a => "⚠ " + a),
@@ -2422,11 +2464,36 @@ async function executer(nom, args) {
 
     case "importer_fichiers": {
       await attendreSelection();
-      const c = courant();
-      if (!c) throw new ErreurOutil("Aucun dossier courant : appelez creer_dossier_affaire (nouvelle affaire) ou choisir_dossier, puis importer_fichiers.");
       const mode = args.mode === "telechargements" ? "telechargements" : "selection";
+      if (mode === "telechargements" && !courant()) {
+        throw new ErreurOutil("Aucun dossier courant pour y copier les téléchargements : appelez choisir_dossier ou creer_dossier_affaire, " +
+          "ou importer_fichiers en mode selection (le dossier des fichiers choisis devient alors le dossier de travail).");
+      }
 
       const importer = async chemins => {
+        // Le dossier de travail suit les fichiers désignés par l'utilisateur :
+        //  - pas de dossier courant : le dossier des fichiers le devient (lecture sur place) ;
+        //  - fichiers pris dans l'arborescence des dossiers (racine des réglages, dossiers déjà désignés), hors du dossier courant :
+        //    l'utilisateur passe à cette affaire, le dossier courant suit (lecture sur place) ;
+        //  - fichiers venant d'ailleurs (Téléchargements, Bureau…) : copiés dans le dossier courant.
+        const valides = chemins.map(b => reel(b)).filter(p => { try { return !!p && fs.statSync(p).isFile(); } catch { return false; } });
+        let c = courant();
+        let bascule = null;
+        if (mode === "selection" && valides.length) {
+          const racine = racineConfiguree();
+          const dansArbo = p => (!!racine && dansRacine(racine, p)) || etat().autorises.some(a => dansRacine(a, p));
+          const dehors = valides.filter(p => !c || !dansRacine(c.chemin, p));
+          if (dehors.length && (!c || dehors.every(dansArbo))) {
+            let commun = path.dirname(dehors[0]);
+            while (!dehors.every(p => dansRacine(commun, p)) && path.dirname(commun) !== commun) commun = path.dirname(commun);
+            if (!(racine && commun === racine) && !tropLarge(commun)) {
+              const avant = c ? c.chemin : null;
+              c = await definirCourantSilencieux(commun, "selecteur");
+              if (c.chemin !== avant) bascule = c;
+            }
+          }
+        }
+        if (!c) throw new ErreurOutil("Ces fichiers ne permettent pas de définir un dossier de travail : appelez choisir_dossier, puis importer_fichiers.");
         const dest = dossierImport(c, args.sous_dossier);
         const copies = [], lisibles = [];
         let deja = 0, ignores = 0, octets = 0;
@@ -2451,12 +2518,15 @@ async function executer(nom, args) {
           return "Aucun fichier importé" + (ignores ? ` (${ignores} élément(s) introuvable(s), illisible(s) ou de plus de 100 Mo).` : ".");
         }
         const lignes = [
-          `${copies.length} fichier(s) copié(s) ${dest.ou} ; les originaux restent en place.`,
+          bascule ? `Dossier de travail défini d'après les fichiers choisis par l'utilisateur : « ${await libelleDe(c)} » — référence d'anonymisation ${c.ref}. ` +
+            "Les livrables seront enregistrés dans ce dossier ; dites-le en une phrase à l'utilisateur." : null,
+          copies.length ? `${copies.length} fichier(s) copié(s) ${dest.ou} ; les originaux restent en place.`
+            : `${deja} fichier(s) lu(s) sur place, sans copie, dans le dossier « ${await libelleDe(c)} ».`,
           ...(await lignesFichiers(c.chemin, lisibles, c.ref)),
-        ];
+        ].filter(Boolean);
         const nonLisibles = copies.length - lisibles.filter(p => copies.includes(p)).length;
         if (nonLisibles) lignes.push(`${nonLisibles} fichier(s) copié(s) dans un format que lire_fichier_anonymise ne lit pas (pas d'identifiant).`);
-        if (deja) lignes.push(`${deja} fichier(s) déjà présent(s) dans le dossier courant : non copié(s).`);
+        if (deja && copies.length) lignes.push(`${deja} fichier(s) déjà présent(s) dans le dossier courant : lu(s) sur place, non copié(s).`);
         if (ignores) lignes.push(`${ignores} élément(s) ignoré(s) : introuvable(s), illisible(s) ou de plus de 100 Mo.`);
         lignes.push("(« … » = mot du nom de fichier masqué par précaution.) Étape suivante : lire_fichier_anonymise avec l'identifiant F….");
         return lignes.join("\n");
@@ -2482,7 +2552,8 @@ async function executer(nom, args) {
       }
 
       return viaDialogue("fichiers", async () => {
-        const initial = process.env.ANON_TELECHARGEMENTS || path.join(os.homedir(), "Downloads");
+        const cc = courant();
+        const initial = (cc && cc.chemin) || racineConfiguree() || process.env.ANON_TELECHARGEMENTS || path.join(os.homedir(), "Downloads");
         const r = await ouvrirSelecteurFichiers(initial);
         if (r.erreur) throw new ErreurOutil(`Sélection impossible : ${r.erreur}. Essayez le mode telechargements.`);
         if (r.annule) return "L'utilisateur a fermé la fenêtre sans choisir de fichier : rien n'a été importé.";
@@ -2786,10 +2857,20 @@ async function traiter(msg) {
 //    le presse-papiers, prêt à coller dans la messagerie ;
 //  - « Envoyer vers → Anonymiseur » (clic droit sur un fichier) : copie texte pseudonymisée créée à côté.
 // Mêmes marqueurs que l'extension : dossier courant, même table, même serveur ou moteur local.
+//
+// Version 1.8.0 — le dossier se gère tout seul :
+//  - choisir_dossier reprend le dossier courant sans fenêtre (mémoire de 7 jours, réglable) ; changer=true
+//    pour en désigner un autre ;
+//  - importer_fichiers : les fichiers désignés définissent le dossier de travail (lus sur place s'ils sont
+//    dans l'arborescence des affaires ; seuls ceux venus d'ailleurs sont copiés dans le dossier courant) ;
+//  - « Envoyer vers → Anonymiseur - travailler dans ce dossier » désigne le dossier sans fenêtre ; la copie
+//    pseudonymisée fait aussi du dossier du fichier le dossier courant ;
+//  - un sous-dossier d'une affaire créée par l'extension est rattaché à la racine de l'affaire.
 // ---------------------------------------------------------------------------
 const RACCOURCIS = /^(1|true|oui|yes)$/i.test(valeurConfig(process.env.ANON_RACCOURCIS || ""));
 const DOSSIER_ENVOIS = process.env.ANON_ENVOIS || path.join(path.dirname(FICHIER_ETAT), "envois");
 const NOM_RACCOURCI_ENVOI = "Anonymiseur - copie pseudonymisée.lnk";
+const NOM_RACCOURCI_DOSSIER = "Anonymiseur - travailler dans ce dossier.lnk";
 
 const CODE_CSHARP_ECOUTEUR = `
 using System;
@@ -2988,16 +3069,18 @@ const SCRIPT_ENVOYER_VERS = dossierEnvois => `# Anonymiseur (cabinet) : « Envoy
 # Fichier écrit par l'extension ; le traitement est fait par l'extension (Claude Desktop doit être ouvert).
 $ErrorActionPreference = 'Stop'
 $dir = '${dossierEnvois.replace(/'/g, "''")}'
+$mode = 'copie'
 $fichiers = @($args)
+if ($fichiers.Count -and $fichiers[0] -eq '--dossier') { $mode = 'dossier'; $fichiers = @($fichiers | Select-Object -Skip 1) }
 function Afficher($texte, $titre) {
   if ($env:ANON_ENVOI_SILENCIEUX) { [Console]::OutputEncoding = [Text.Encoding]::UTF8; [Console]::Out.WriteLine($titre + ' : ' + $texte); return }
   Add-Type -AssemblyName System.Windows.Forms
   [void][System.Windows.Forms.MessageBox]::Show($texte, $titre)
 }
-if (-not $fichiers.Count) { Afficher 'Sélectionnez un ou plusieurs fichiers.' 'Anonymiseur'; exit }
+if (-not $fichiers.Count) { Afficher 'Sélectionnez un dossier ou un ou plusieurs fichiers.' 'Anonymiseur'; exit }
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
 $id = [guid]::NewGuid().ToString('N')
-$demande = @{ id = $id; quand = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds(); fichiers = $fichiers } | ConvertTo-Json -Compress
+$demande = @{ id = $id; mode = $mode; quand = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds(); fichiers = $fichiers } | ConvertTo-Json -Compress
 [IO.File]::WriteAllText((Join-Path $dir "$id.tmp"), $demande, (New-Object Text.UTF8Encoding $false))
 Move-Item -LiteralPath (Join-Path $dir "$id.tmp") -Destination (Join-Path $dir "$id.json")
 $resultat = Join-Path $dir "$id.resultat.json"
@@ -3014,27 +3097,36 @@ if (-not (Test-Path -LiteralPath $resultat)) { Afficher 'Le traitement a pris tr
 $r = Get-Content -LiteralPath $resultat -Raw -Encoding UTF8 | ConvertFrom-Json
 Remove-Item -LiteralPath $resultat -ErrorAction SilentlyContinue
 if ($r.sorties -and $r.sorties.Count -and -not $env:ANON_ENVOI_SILENCIEUX) { Start-Process explorer.exe -ArgumentList ('/select,"' + $r.sorties[0] + '"') }
-Afficher $r.message 'Anonymiseur : copie pseudonymisée'
+Afficher $r.message $(if ($mode -eq 'dossier') { 'Anonymiseur : dossier de travail' } else { 'Anonymiseur : copie pseudonymisée' })
 `;
 
 /** Crée (ou retire) l'entrée « Envoyer vers » de l'Explorateur Windows. */
 async function installerEnvoyerVers(actif) {
   if (process.platform !== "win32" || process.env.ANON_SENDTO === "0") return;
   const dossierSendTo = process.env.ANON_SENDTO || path.join(process.env.APPDATA || "", "Microsoft", "Windows", "SendTo");
-  const lien = path.join(dossierSendTo, NOM_RACCOURCI_ENVOI);
-  if (!actif) { try { fs.unlinkSync(lien); } catch { /* absent */ } return; }
+  const liens = [
+    { nom: NOM_RACCOURCI_ENVOI, option: "", icone: 47, description: "Créer une copie pseudonymisée à joindre dans Claude" },
+    { nom: NOM_RACCOURCI_DOSSIER, option: " --dossier", icone: 3, description: "Faire de ce dossier le dossier de travail de Claude (Anonymiseur)" },
+  ];
+  if (!actif) {
+    for (const l of liens) { try { fs.unlinkSync(path.join(dossierSendTo, l.nom)); } catch { /* absent */ } }
+    return;
+  }
   const script = path.join(path.dirname(FICHIER_ETAT), "envoyer-vers.ps1");
   fs.mkdirSync(path.dirname(script), { recursive: true });
   fs.writeFileSync(script, "﻿" + SCRIPT_ENVOYER_VERS(DOSSIER_ENVOIS), "utf8");
-  if (fs.existsSync(lien)) return;
-  const ps = `$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:ANON_LIEN)
+  for (const l of liens) {
+    const lien = path.join(dossierSendTo, l.nom);
+    if (fs.existsSync(lien)) continue;
+    const ps = `$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:ANON_LIEN)
 $s.TargetPath = "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
-$s.Arguments = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $env:ANON_SCRIPT + '"'
-$s.IconLocation = "$env:SystemRoot\\System32\\shell32.dll,47"
-$s.Description = 'Créer une copie pseudonymisée à joindre dans Claude'
+$s.Arguments = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $env:ANON_SCRIPT + '"' + $env:ANON_OPTION
+$s.IconLocation = "$env:SystemRoot\\System32\\shell32.dll," + $env:ANON_ICONE
+$s.Description = $env:ANON_DESCRIPTION
 $s.Save()`;
-  const r = await lancerPowerShell(ps, { ANON_LIEN: lien, ANON_SCRIPT: script });
-  if (!fs.existsSync(lien)) log("« Envoyer vers » non créé :", r.erreur.slice(0, 200));
+    const r = await lancerPowerShell(ps, { ANON_LIEN: lien, ANON_SCRIPT: script, ANON_OPTION: l.option, ANON_ICONE: String(l.icone), ANON_DESCRIPTION: l.description });
+    if (!fs.existsSync(lien)) log("« Envoyer vers » non créé :", r.erreur.slice(0, 200));
+  }
 }
 
 let envoisEnCours = false;
@@ -3050,12 +3142,39 @@ async function traiterEnvois() {
       try { fs.renameSync(demande, prise); } catch { continue; } // prise par une autre instance
       let d;
       try { d = JSON.parse(fs.readFileSync(prise, "utf8").replace(/^﻿/, "")); } catch { fs.rmSync(prise, { force: true }); continue; }
-      log("envoi : demande prise,", [].concat(d.fichiers || []).length, "fichier(s), forme", typeof d.fichiers);
+      const id = n.slice(0, 32);
       const resultat = { ok: true, sorties: [], message: "" };
       if (Date.now() - (d.quand || 0) > 120000) { fs.rmSync(prise, { force: true }); continue; }
+      const ecrireResultat = () => {
+        const tmp = path.join(DOSSIER_ENVOIS, `${id}.resultat.tmp`);
+        fs.writeFileSync(tmp, JSON.stringify(resultat), "utf8");
+        fs.renameSync(tmp, path.join(DOSSIER_ENVOIS, `${id}.resultat.json`));
+        fs.rmSync(prise, { force: true });
+      };
+      const elements = [].concat(d.fichiers || []).map(String);
+      // Dossier de travail : le dossier désigné (mode « dossier ») ou celui du premier fichier (mode « copie »)
+      let ligneDossier = "";
+      try {
+        const premier = elements.length ? reel(elements[0]) : null;
+        if (premier) {
+          const dossierVise = existeDossier(premier) ? premier : path.dirname(premier);
+          const c = await definirCourantSilencieux(dossierVise, "envoyer_vers");
+          ligneDossier = `Dossier de travail de Claude : « ${path.basename(c.chemin)} ».`;
+        }
+      } catch (e) {
+        if (d.mode === "dossier") { resultat.ok = false; ligneDossier = e instanceof ErreurOutil ? e.message : "Dossier non défini."; }
+      }
+      if (d.mode === "dossier") {
+        resultat.message = resultat.ok && ligneDossier
+          ? `${ligneDossier}\nDemandez maintenant à Claude, par exemple : « liste les pièces du dossier ». Aucune fenêtre ne vous sera plus demandée pour ce dossier.`
+          : (ligneDossier || "Sélectionnez un dossier.");
+        if (!ligneDossier) resultat.ok = false;
+        ecrireResultat();
+        continue;
+      }
       const lignes = [];
       let masques = 0;
-      for (const brut of [].concat(d.fichiers || []).slice(0, 50)) {
+      for (const brut of elements.slice(0, 50)) {
         const nom = path.basename(String(brut));
         try {
           const chemin = reel(String(brut));
@@ -3065,9 +3184,7 @@ async function traiterEnvois() {
           if (fs.statSync(chemin).size > MAX_OCTETS) throw new ErreurOutil("plus de 25 Mo");
           const c = courant();
           const dossier = c && dansRacine(c.chemin, chemin) ? c.ref : refPour(path.dirname(chemin));
-          log("envoi : pseudonymisation", ext);
           const r = await pseudonymiserFichier(chemin, dossier);
-          log("envoi : pseudonymisé");
           // Nom de la copie lui-même pseudonymisé : il sera visible de Claude une fois le fichier joint
           const base = path.basename(chemin, path.extname(chemin));
           let nomPseudo = "document";
@@ -3086,11 +3203,8 @@ async function traiterEnvois() {
       }
       resultat.message = (resultat.sorties.length
         ? `${resultat.sorties.length} copie(s) pseudonymisée(s) créée(s) à côté des originaux (${masques} donnée(s) masquée(s)).\n` +
-          "Relisez-la, puis glissez-la dans Claude.\n\n" : "Aucune copie créée.\n\n") + lignes.join("\n");
-      const tmp = path.join(DOSSIER_ENVOIS, `${d.id}.resultat.tmp`);
-      fs.writeFileSync(tmp, JSON.stringify(resultat), "utf8");
-      fs.renameSync(tmp, path.join(DOSSIER_ENVOIS, `${d.id}.resultat.json`));
-      fs.rmSync(prise, { force: true });
+          "Relisez-la, puis glissez-la dans Claude.\n" + (ligneDossier ? ligneDossier + "\n" : "") + "\n" : "Aucune copie créée.\n\n") + lignes.join("\n");
+      ecrireResultat();
     }
   } finally {
     envoisEnCours = false;
