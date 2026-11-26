@@ -203,6 +203,21 @@ cd serveur-ubuntu && python -m tests.test_moteur
 ```
 
 ---
+## Et avec ChatGPT ou Mistral ?
+
+L'extension parle MCP, un protocole ouvert que d'autres assistants commencent à utiliser ; seul son emballage
+(paquet `.mcpb`, page de réglages) est propre à Claude Desktop. État des lieux en novembre 2026 :
+
+| Assistant | Possible ? | Ce qu'il faudrait |
+|---|---|---|
+| **Mistral Vibe** (ligne de commande et sessions locales de Vibe Desktop) | Oui, l'extension peut y tourner sur le poste | Inscrire l'extension dans la configuration de Vibe et installer Node (fourni d'office par Claude Desktop, pas par Vibe) ; adaptation à venir |
+| **ChatGPT** | Pas directement : ChatGPT n'accepte que des serveurs distants, et l'accès complet (écriture des livrables) est réservé aux offres Business et Enterprise | Rendre l'extension joignable par un tunnel sécurisé (« Secure MCP Tunnel » d'OpenAI), avec authentification |
+
+En attendant, les gestes **Ctrl + Alt + Maj + V** (coller pseudonymisé), **Ctrl + Alt + Maj + R** (remettre les vrais noms)
+et **Envoyer vers → « Anonymiseur - copie pseudonymisée »** fonctionnent dans n'importe quelle fenêtre, y compris
+ChatGPT ou Le Chat de Mistral, tant que Claude Desktop est ouvert : le texte collé ou le fichier joint n'y part que sous
+sa forme pseudonymisée.
+
 ## Limites
 
 - **Ce que vous tapez ou collez avec `Ctrl` + `V` directement dans la conversation, et les fichiers que vous y glissez, ne
