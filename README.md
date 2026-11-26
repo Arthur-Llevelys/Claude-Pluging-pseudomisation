@@ -111,7 +111,11 @@ Détails et mesures : [`prototype-autonome/RESULTATS.md`](prototype-autonome/RES
 
 3. **Dans les réglages de l'extension :**
    - **Dossier racine de vos dossiers** : le dossier qui contient vos affaires ;
-   - cochez **Moteur local (sans serveur)** ;
+   - **sans serveur** : cochez **Moteur local (sans serveur)** ;
+   - **avec un serveur d'anonymisation** : laissez « Moteur local » décoché, renseignez la **clé d'API** et l'**adresse du
+     serveur**, par exemple `http://192.168.1.10:8765`. L'adresse proposée par défaut, `http://127.0.0.1:8765`, ne convient
+     que si le serveur tourne sur le même ordinateur ;
+   - **Raccourcis Windows** (coché par défaut) : `Ctrl` + `Alt` + `Maj` + `V`, `Ctrl` + `Alt` + `Maj` + `R` et « Envoyer vers » ;
    - facultatif : dossier de vos modèles Word, messagerie IMAP (le mot de passe est stocké chiffré par Claude Desktop).
 
 4. **Ollama** (reconnaissance des noms - facultatif) : installez-le depuis [ollama.com](https://ollama.com/download), puis
@@ -121,7 +125,7 @@ Détails et mesures : [`prototype-autonome/RESULTATS.md`](prototype-autonome/RES
    ```
    Le modèle (2,8 Go) n'est téléchargé qu'une fois. Sans Ollama, l'extension fonctionne avec les règles seules et vous le signale.
 
-6. Facultatif, pour les PDF scannés : **Tesseract**
+5. Facultatif, pour les PDF scannés : **Tesseract**
    (Windows : programme d'installation « [Tesseract at UB Mannheim](https://tesseractocr.org/fr/install/) », en cochant la langue
    française).
 
@@ -144,15 +148,34 @@ Détails et mesures : [`prototype-autonome/RESULTATS.md`](prototype-autonome/RES
    osd
    ```
    
-8. Ouvrez une nouvelle conversation et dites : « Vérifie l'anonymiseur ».
+6. Pour voir les notifications des raccourcis : Paramètres Windows → Système → **Notifications**, activées, avec
+   « Windows PowerShell » autorisé (c'est lui qui affiche les bulles de l'Anonymiseur), et « Ne pas déranger » désactivé.
+
+7. Ouvrez une nouvelle conversation et dites : « Vérifie l'anonymiseur ». La réponse doit indiquer « moteur local » ou
+   « serveur joignable » et « Clé d'API : acceptée ».
 
 Serveur Linux (facultatif) : voir [`serveur-ubuntu/LISEZMOI.md`](serveur-ubuntu/LISEZMOI.md) (`sudo bash install.sh`).
+
+---
+## Dépannage
+
+| Ce que vous constatez | Cause probable et solution |
+|---|---|
+| Un **bip** quand vous appuyez sur `Ctrl` + `Alt` + `Maj` + `V`, et rien n'est collé | Le raccourci est bien reçu, mais l'extension a rencontré une erreur : le bip est le son de sa notification d'avertissement. Rendez les notifications visibles (étape 6 de l'installation) pour lire le message. Le plus souvent : **adresse du serveur** incorrecte (voir la ligne suivante), ou presse-papiers sans texte. |
+| « Serveur d'anonymisation injoignable (http://127.0.0.1:8765) » | L'adresse du serveur est restée sur sa valeur par défaut. Réglages de l'extension → **Adresse du serveur d'anonymisation** → mettez celle de votre serveur (`http://192.168.1.10:8765`, par exemple), ou cochez **Moteur local**. |
+| « Clé d'API refusée » | Recopiez la clé du serveur (`sudo grep ANON_API_KEY /etc/anonymiseur/anonymiseur.env`) dans les réglages de l'extension. |
+| Aucune icône de bouclier près de l'horloge | Les raccourcis ne sont pas actifs : vérifiez le réglage **Raccourcis Windows**, puis quittez complètement Claude Desktop (icône près de l'horloge → Quitter) et rouvrez-le. Si une autre application utilise déjà la même combinaison de touches, Windows refuse de l'attribuer à l'Anonymiseur. |
+| Le texte collé n'utilise pas les marqueurs de l'affaire | Les raccourcis suivent le **dossier courant** de l'extension. Faites d'abord choisir le dossier dans Claude. Le dossier courant est oublié après 12 heures sans utilisation. |
+| Deux extensions « Anonymiseur (cabinet) » dans Claude après une mise à jour | Claude identifie une extension par son nom d'auteur. Gardez la version la plus récente et désinstallez l'autre, puis vérifiez ses réglages (adresse du serveur, clé). |
+| « Envoyer vers » répond que Claude Desktop n'est pas ouvert | La copie pseudonymisée est produite par l'extension : ouvrez Claude Desktop, puis recommencez. |
+| « Reconnaissance des noms inactive » | Ollama n'est pas démarré, ou le modèle n'est pas téléchargé (`ollama pull ministral-3:3b`). Les règles continuent de s'appliquer : relisez les noms. |
 
 ---
 ## Vérifications
 
 ```
-node --test tests/extension.test.js      # 32 tests de l'extension (données fictives)
+node --test tests/extension.test.js      # 34 tests de l'extension (données fictives)
+node tests/verifier-raccourcis-windows.js # raccourcis et « Envoyer vers » en conditions réelles (Windows)
 node tests/comparer-moteurs.js           # moteur local et serveur : résultats identiques
 cd serveur-ubuntu && python -m tests.test_moteur
 ```
@@ -160,7 +183,8 @@ cd serveur-ubuntu && python -m tests.test_moteur
 ---
 ## Limites
 
-- **Ce que vous tapez ou collez directement dans la conversation n'est pas filtré : passez par « lis le presse-papiers ».**
+- **Ce que vous tapez ou collez avec `Ctrl` + `V` directement dans la conversation, et les fichiers que vous y glissez, ne
+  sont pas filtrés** : collez avec `Ctrl` + `Alt` + `Maj` + `V`, dites « lis le presse-papiers », ou utilisez « Envoyer vers ».
 - La reconnaissance des noms par un petit modèle prend environ 15 à 30 s par page sur un portable sans carte graphique.
 - L'OCR peut déformer un nom propre, qui échappe alors au masquage : relisez les PDF scannés.
 - Un PDF contenant déjà des marqueurs ne peut pas être ré-identifié : faites produire un Word.
