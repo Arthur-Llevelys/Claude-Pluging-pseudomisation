@@ -1,7 +1,7 @@
 # AxiorHub : Extension de pseudonymisation dans Claude Desktop
 **Créée par Timo Rainio Avocat** · Logiciel libre sous licence [GNU AGPL v3 ou ultérieure](LICENSE) · Windows, macOS, Linux
 
-## 📦 [Télécharger](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/releases/download/v1.6.1/anonymiseur-cabinet-1.6.1.mcpb)
+## 📦 [Télécharger](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/raw/main/paquets/anonymiseur-cabinet-1.7.0.mcpb)
 
 
 ### Extension pour Claude Desktop qui permet de travailler avec Claude sur des dossiers clients sans que les données personnelles quittent votre poste. 
@@ -25,6 +25,8 @@ Courrier enregistré      : « Madame Hélène Vasseur… » (Word, dans le doss
 > - Laissez les pièces dans le dossier de l'affaire (ou demandez à Claude « importe les pièces »)
 > et demandez à Claude de les lire ;
 > - Pour un texte, copiez-le (Control + C ou Séléctionner le texte et "Copier"), puis demandez à Claude de « lire le presse-papiers ».
+> - Ou, depuis la version 1.7.0 : copiez le texte puis **Ctrl + Alt + Maj + V** (« Coller pseudonymisé ») ; pour un
+> fichier, clic droit → **Envoyer vers → « Anonymiseur - copie pseudonymisée »**, puis glissez la copie dans Claude.
 ---
 ## Comment utiliser l'extension avec Claude
 
@@ -46,6 +48,23 @@ Un journal local trace chaque opération **sans aucune donnée en clair**.
 données réelles. Le texte ré-identifié est écrit sur votre poste ou dans le presse-papiers, jamais dans la conversation.
 
 ---
+## Nouveau dans la 1.7.0 : coller pseudonymisé et « Envoyer vers »
+
+Ce que vous tapez, collez ou glissez dans la zone de saisie de Claude part tel quel : aucune extension ne peut
+filtrer ce champ. La 1.7.0 ajoute deux gestes qui remplacent le collage et la pièce jointe :
+
+| Geste | Ce qui se passe |
+|---|---|
+| Copier un texte, puis **Ctrl + Alt + Maj + V** dans la conversation | Le texte copié est pseudonymisé sur le poste (mêmes marqueurs que le dossier courant), puis c'est cette version qui est collée. Une notification indique le nombre de données masquées. |
+| Copier la réponse de Claude, puis **Ctrl + Alt + Maj + R** | Les vrais noms sont remis dans le presse-papiers (exclu de l'historique Windows) : collez dans votre messagerie. |
+| Clic droit sur un fichier → **Envoyer vers → « Anonymiseur - copie pseudonymisée »** | Une copie texte pseudonymisée est créée à côté du fichier (OCR compris pour les PDF scannés), avec un nom lui-même pseudonymisé : glissez cette copie dans Claude. |
+
+Les raccourcis fonctionnent tant que Claude Desktop est ouvert ; une icône en forme de bouclier dans la zone de
+notification signale qu'ils sont actifs. Réglage **« Raccourcis Windows »** (activé par défaut) pour les
+désactiver ; l'entrée « Envoyer vers » est alors retirée. Si vous désinstallez l'extension, supprimez à la main
+l'entrée « Anonymiseur - copie pseudonymisée » de `%APPDATA%\Microsoft\Windows\SendTo`.
+Rien ne vous empêche de coller l'original par erreur avec Ctrl + V : ces gestes réduisent le risque sans le supprimer.
+
 ## Deux façons de faire tourner la détection
 
 1. **Via la moteur local (recommandé pour un cabinet sans serveur)** — tout se passe dans l'extension, sur le poste :
@@ -87,7 +106,7 @@ Détails et mesures : [`prototype-autonome/RESULTATS.md`](prototype-autonome/RES
 
 1. **Claude Desktop** installé et connecté.
 
-2. **Téléchargez** [`paquets/anonymiseur-cabinet-1.6.1.mcpb`](paquets/) puis, **dans Claude Desktop** : Paramètres (`Ctrl` + `,`)
+2. **Téléchargez** [`paquets/anonymiseur-cabinet-1.7.0.mcpb`](paquets/) puis, **dans Claude Desktop** : Paramètres (`Ctrl` + `,`)
    → **Extensions** → glissez le fichier dans la fenêtre et validez l'installation.
 
 3. **Dans les réglages de l'extension :**

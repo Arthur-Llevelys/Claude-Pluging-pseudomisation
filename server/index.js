@@ -68,7 +68,7 @@ const crypto = require("crypto");
 const { spawn } = require("child_process");
 const { fileURLToPath } = require("url");
 
-const VERSION = "1.6.1";
+const VERSION = "1.7.0";
 const SERVEUR = (process.env.ANON_SERVEUR || "http://127.0.0.1:8765").replace(/\/+$/, "");
 const CLE = process.env.ANON_CLE || "";
 const DOSSIER_TRAVAIL = process.env.ANON_DOSSIER_TRAVAIL || "";
@@ -2012,7 +2012,9 @@ const INSTRUCTIONS =
   "(7) détection imparfaite dans un document lu (nom laissé en clair, mot courant masqué, même personne sous deux marqueurs) : " +
   "corriger_entite, puis relire le document ; " +
   "(8) si l'utilisateur colle directement du texte non pseudonymisé dans la conversation, rappelez-lui brièvement qu'il peut le copier puis " +
-  "vous demander de lire le presse-papiers (importer_presse_papiers).";
+  "vous demander de lire le presse-papiers (importer_presse_papiers), ou d'utiliser le raccourci Ctrl+Alt+Maj+V (« Coller pseudonymisé ») " +
+  "qui colle directement la version pseudonymisée ; un fichier glissé dans la zone de saisie n'est pas filtré non plus : proposez " +
+  "importer_fichiers, ou le clic droit « Envoyer vers → Anonymiseur » qui en crée une copie pseudonymisée.";
 
 async function executer(nom, args) {
   switch (nom) {
@@ -2777,6 +2779,332 @@ async function traiter(msg) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Version 1.7.0 — raccourcis Windows, actifs tant que Claude Desktop est ouvert :
+//  - « Coller pseudonymisé » (Ctrl+Alt+Maj+V) : le texte copié est pseudonymisé puis collé à sa place ;
+//  - « Remettre les vrais noms » (Ctrl+Alt+Maj+R) : le texte copié (réponse de Claude) est ré-identifié dans
+//    le presse-papiers, prêt à coller dans la messagerie ;
+//  - « Envoyer vers → Anonymiseur » (clic droit sur un fichier) : copie texte pseudonymisée créée à côté.
+// Mêmes marqueurs que l'extension : dossier courant, même table, même serveur ou moteur local.
+// ---------------------------------------------------------------------------
+const RACCOURCIS = /^(1|true|oui|yes)$/i.test(valeurConfig(process.env.ANON_RACCOURCIS || ""));
+const DOSSIER_ENVOIS = process.env.ANON_ENVOIS || path.join(path.dirname(FICHIER_ETAT), "envois");
+const NOM_RACCOURCI_ENVOI = "Anonymiseur - copie pseudonymisée.lnk";
+
+const CODE_CSHARP_ECOUTEUR = `
+using System;
+using System.Drawing;
+using System.Threading;
+using System.Windows.Forms;
+using System.Runtime.InteropServices;
+public class AnonEcouteur : NativeWindow {
+  [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr h, int id, uint mod, uint vk);
+  [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr h, int id);
+  [DllImport("user32.dll")] static extern short GetAsyncKeyState(int vk);
+  static NotifyIcon icone;
+  static Control ui;
+  protected override void WndProc(ref Message m) {
+    if (m.Msg == 0x0312) Console.Out.WriteLine(m.WParam.ToInt32() == 1 ? "HOTKEY:COLLER" : "HOTKEY:REID");
+    base.WndProc(ref m);
+  }
+  static void Coller() {
+    // Attendre que l'utilisateur ait relâché Ctrl, Alt, Maj et Windows, sinon Ctrl+V serait déformé
+    for (int i = 0; i < 60; i++) {
+      bool appuye = false;
+      foreach (int vk in new int[] { 0x10, 0x11, 0x12, 0x5B, 0x5C }) if ((GetAsyncKeyState(vk) & 0x8000) != 0) appuye = true;
+      if (!appuye) break;
+      Thread.Sleep(50);
+    }
+    if (Environment.GetEnvironmentVariable("ANON_ECOUTEUR_SANS_COLLER") == "1") return; // essais : rien n'est collé
+    SendKeys.SendWait("^v");
+  }
+  public static void Lancer(uint vkColler, uint vkReid) {
+    AnonEcouteur f = new AnonEcouteur();
+    f.CreateHandle(new CreateParams());
+    ui = new Control();
+    ui.CreateControl();
+    uint mods = 0x0001 | 0x0002 | 0x0004 | 0x4000; // Alt + Ctrl + Maj, sans répétition
+    bool a = RegisterHotKey(f.Handle, 1, mods, vkColler);
+    bool b = RegisterHotKey(f.Handle, 2, mods, vkReid);
+    if (!a && !b) { Console.Out.WriteLine("OCCUPE"); return; }
+    icone = new NotifyIcon();
+    icone.Icon = SystemIcons.Shield;
+    icone.Text = "Anonymiseur (cabinet) : raccourcis actifs";
+    icone.Visible = true;
+    Console.Out.WriteLine("PRET:" + (a ? "COLLER" : "") + "," + (b ? "REID" : ""));
+    Thread lecteur = new Thread(delegate () {
+      string ligne;
+      while ((ligne = Console.In.ReadLine()) != null) {
+        string l = ligne;
+        if (l == "COLLER") ui.BeginInvoke((MethodInvoker)delegate { Coller(); Console.Out.WriteLine("COLLE"); });
+        else if (l.StartsWith("NOTIF\\t")) {
+          string[] p = l.Split('\\t');
+          string titre = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(p[1]));
+          string texte = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(p[2]));
+          ui.BeginInvoke((MethodInvoker)delegate { icone.ShowBalloonTip(6000, titre, texte, p.Length > 3 && p[3] == "1" ? ToolTipIcon.Warning : ToolTipIcon.Info); });
+        }
+      }
+      ui.BeginInvoke((MethodInvoker)delegate { Application.Exit(); });
+    });
+    lecteur.IsBackground = true;
+    lecteur.Start();
+    Application.Run();
+    icone.Visible = false;
+    UnregisterHotKey(f.Handle, 1);
+    UnregisterHotKey(f.Handle, 2);
+  }
+}`;
+
+const SCRIPT_PS_ECOUTEUR = `
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -TypeDefinition $env:ANON_ECOUTEUR_CODE -ReferencedAssemblies System.Windows.Forms, System.Drawing
+[AnonEcouteur]::Lancer([uint32]$env:ANON_VK_COLLER, [uint32]$env:ANON_VK_REID)
+`;
+
+let ecouteur = null;
+let raccourciEnCours = false;
+
+function versEcouteur(ligne) {
+  if (ecouteur && ecouteur.stdin && ecouteur.stdin.writable) ecouteur.stdin.write(ligne + "\n");
+}
+function notifier(titre, texte, alerte = false) {
+  const b64 = s => Buffer.from(String(s).slice(0, 250), "utf8").toString("base64");
+  versEcouteur(`NOTIF\t${b64(titre)}\t${b64(texte)}\t${alerte ? 1 : 0}`);
+}
+
+/** Dossier dont les marqueurs servent aux raccourcis : le dossier courant, à défaut la référence par défaut. */
+function refRaccourci() {
+  const c = selectionEnCours ? null : courant();
+  return { c, dossier: c ? c.ref : nomDossier() };
+}
+
+async function raccourciColler() {
+  const lu = await lirePressePapiers();
+  const texte = String(lu.texte || "");
+  if (lu.erreur || !texte.trim()) return notifier("Anonymiseur", "Le presse-papiers ne contient pas de texte à coller.", true);
+  const { c, dossier } = refRaccourci();
+  const r = await anonymiserTexte(texte, dossier);
+  const e = await ecrirePressePapiers(String(r.texte || ""));
+  if (e.erreur) return notifier("Anonymiseur", "Presse-papiers indisponible : rien n'a été collé.", true);
+  versEcouteur("COLLER");
+  toucher(c);
+  journaliser("raccourci_coller", { ref: dossier, caracteres: texte.length, remplacements: r.nb_remplacements, entites: compteTypes(r.entites) });
+  const n = r.nb_remplacements || 0;
+  const avert = (r.avertissements || []).length ? " Attention : reconnaissance des noms inactive, relisez." : "";
+  notifier("Texte pseudonymisé collé", `${n} donnée(s) masquée(s), ${c ? `dossier « ${c.libelle || c.ref} »` : "aucun dossier courant : référence par défaut"}.${avert}`,
+    !c || !!avert);
+}
+
+async function raccourciReidentifier() {
+  const lu = await lirePressePapiers();
+  const texte = String(lu.texte || "");
+  const types = await typesMarqueurs();
+  if (lu.erreur || !trouverMarqueurs(texte, types).length) return notifier("Anonymiseur", "Le texte copié ne contient aucun marqueur ([PERSONNE_1]…).", true);
+  const { c, dossier } = refRaccourci();
+  const r = await (await appelApi("/api/reidentifier", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texte, dossier }),
+  })).json();
+  const inconnus = r.marqueurs_inconnus || [];
+  if (!r.nb_remplacements) return notifier("Anonymiseur", `Aucun de ces marqueurs n'est connu dans « ${dossier} » : choisissez le bon dossier dans Claude.`, true);
+  const e = await ecrirePressePapiers(texteSansMarkdown(String(r.texte || "")));
+  if (e.erreur) return notifier("Anonymiseur", "Presse-papiers indisponible.", true);
+  toucher(c);
+  journaliser("raccourci_reidentifier", { ref: dossier, caracteres: texte.length, remplacements: r.nb_remplacements, inconnus: inconnus.length });
+  notifier("Vrais noms remis dans le presse-papiers", `${r.nb_remplacements} marqueur(s) remplacé(s) : collez (Ctrl+V) dans votre messagerie, puis relisez.` +
+    (inconnus.length ? ` ${inconnus.length} marqueur(s) inconnu(s) laissé(s) tels quels.` : ""), inconnus.length > 0);
+}
+
+async function traiterRaccourci(action) {
+  if (raccourciEnCours) return;
+  raccourciEnCours = true;
+  try {
+    if (action === "COLLER") await raccourciColler();
+    else if (action === "REID") await raccourciReidentifier();
+  } catch (e) {
+    log("raccourci", action, e.message);
+    notifier("Anonymiseur", e instanceof ErreurOutil ? e.message.slice(0, 240) : "Erreur interne : rien n'a été collé.", true);
+  } finally {
+    raccourciEnCours = false;
+  }
+}
+
+function demarrerEcouteur() {
+  const commande = process.env.ANON_ECOUTEUR_COMMANDE; // tests : écouteur simulé, ["node", "faux-ecouteur.js"]
+  let enfant;
+  try {
+    if (commande) {
+      const [cmd, ...args] = JSON.parse(commande);
+      enfant = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    } else {
+      if (process.platform !== "win32") return;
+      const vk = l => String((String(l || "").toUpperCase().match(/^[A-Z]$/) ? String(l).toUpperCase() : "").charCodeAt(0) || 0);
+      enfant = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-STA", "-ExecutionPolicy", "Bypass", "-EncodedCommand",
+        Buffer.from(SCRIPT_PS_ECOUTEUR, "utf16le").toString("base64")], {
+        env: Object.assign({}, process.env, { ANON_ECOUTEUR_CODE: CODE_CSHARP_ECOUTEUR,
+          ANON_VK_COLLER: vk(process.env.ANON_TOUCHE_COLLER) !== "0" ? vk(process.env.ANON_TOUCHE_COLLER) : "86",
+          ANON_VK_REID: vk(process.env.ANON_TOUCHE_REID) !== "0" ? vk(process.env.ANON_TOUCHE_REID) : "82" }),
+        windowsHide: true, stdio: ["pipe", "pipe", "pipe"],
+      });
+    }
+  } catch (e) {
+    log("raccourcis : démarrage impossible :", e.message);
+    return;
+  }
+  ecouteur = enfant;
+  let tampon = "";
+  enfant.stdout.setEncoding("utf8");
+  enfant.stdout.on("data", d => {
+    tampon += d;
+    let i;
+    while ((i = tampon.indexOf("\n")) >= 0) {
+      const ligne = tampon.slice(0, i).trim();
+      tampon = tampon.slice(i + 1);
+      if (ligne === "HOTKEY:COLLER") traiterRaccourci("COLLER");
+      else if (ligne === "HOTKEY:REID") traiterRaccourci("REID");
+      else if (ligne) log("raccourcis :", ligne);
+    }
+  });
+  enfant.stderr.on("data", d => log("raccourcis (erreur) :", String(d).slice(0, 300)));
+  enfant.on("exit", () => { if (ecouteur === enfant) ecouteur = null; });
+  enfant.on("error", e => log("raccourcis :", e.message));
+}
+
+// ------------------------------------------------------------------ « Envoyer vers » : copie pseudonymisée
+/** Version pseudonymisée d'un fichier (même chemin que lire_fichier_anonymise, OCR compris). */
+async function pseudonymiserFichier(chemin, dossier) {
+  const ext = path.extname(chemin).toLowerCase();
+  const data = ext === ".dotx" ? dotxVersDocx(await fsp.readFile(chemin)) : await fsp.readFile(chemin);
+  const fd = new FormData();
+  fd.append("fichier", new Blob([data]), "document" + (ext === ".dotx" ? ".docx" : ext));
+  fd.append("dossier", dossier);
+  fd.append("options", JSON.stringify({ consigne: false }));
+  return (await appelApi("/api/anonymiser-fichier", { method: "POST", body: fd })).json();
+}
+
+const SCRIPT_ENVOYER_VERS = dossierEnvois => `# Anonymiseur (cabinet) : « Envoyer vers » — crée une copie pseudonymisée des fichiers sélectionnés.
+# Fichier écrit par l'extension ; le traitement est fait par l'extension (Claude Desktop doit être ouvert).
+$ErrorActionPreference = 'Stop'
+$dir = '${dossierEnvois.replace(/'/g, "''")}'
+$fichiers = @($args)
+function Afficher($texte, $titre) {
+  if ($env:ANON_ENVOI_SILENCIEUX) { [Console]::OutputEncoding = [Text.Encoding]::UTF8; [Console]::Out.WriteLine($titre + ' : ' + $texte); return }
+  Add-Type -AssemblyName System.Windows.Forms
+  [void][System.Windows.Forms.MessageBox]::Show($texte, $titre)
+}
+if (-not $fichiers.Count) { Afficher 'Sélectionnez un ou plusieurs fichiers.' 'Anonymiseur'; exit }
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+$id = [guid]::NewGuid().ToString('N')
+$demande = @{ id = $id; quand = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds(); fichiers = $fichiers } | ConvertTo-Json -Compress
+[IO.File]::WriteAllText((Join-Path $dir "$id.tmp"), $demande, (New-Object Text.UTF8Encoding $false))
+Move-Item -LiteralPath (Join-Path $dir "$id.tmp") -Destination (Join-Path $dir "$id.json")
+$resultat = Join-Path $dir "$id.resultat.json"
+for ($i = 0; $i -lt 1200; $i++) {
+  if (Test-Path -LiteralPath $resultat) { break }
+  if ($i -eq 50 -and (Test-Path -LiteralPath (Join-Path $dir "$id.json"))) {
+    Remove-Item -LiteralPath (Join-Path $dir "$id.json") -ErrorAction SilentlyContinue
+    Afficher "Claude Desktop n'est pas ouvert, ou l'extension Anonymiseur y est désactivée. Ouvrez Claude Desktop puis recommencez." 'Anonymiseur'
+    exit
+  }
+  Start-Sleep -Milliseconds 200
+}
+if (-not (Test-Path -LiteralPath $resultat)) { Afficher 'Le traitement a pris trop de temps.' 'Anonymiseur'; exit }
+$r = Get-Content -LiteralPath $resultat -Raw -Encoding UTF8 | ConvertFrom-Json
+Remove-Item -LiteralPath $resultat -ErrorAction SilentlyContinue
+if ($r.sorties -and $r.sorties.Count -and -not $env:ANON_ENVOI_SILENCIEUX) { Start-Process explorer.exe -ArgumentList ('/select,"' + $r.sorties[0] + '"') }
+Afficher $r.message 'Anonymiseur : copie pseudonymisée'
+`;
+
+/** Crée (ou retire) l'entrée « Envoyer vers » de l'Explorateur Windows. */
+async function installerEnvoyerVers(actif) {
+  if (process.platform !== "win32" || process.env.ANON_SENDTO === "0") return;
+  const dossierSendTo = process.env.ANON_SENDTO || path.join(process.env.APPDATA || "", "Microsoft", "Windows", "SendTo");
+  const lien = path.join(dossierSendTo, NOM_RACCOURCI_ENVOI);
+  if (!actif) { try { fs.unlinkSync(lien); } catch { /* absent */ } return; }
+  const script = path.join(path.dirname(FICHIER_ETAT), "envoyer-vers.ps1");
+  fs.mkdirSync(path.dirname(script), { recursive: true });
+  fs.writeFileSync(script, "﻿" + SCRIPT_ENVOYER_VERS(DOSSIER_ENVOIS), "utf8");
+  if (fs.existsSync(lien)) return;
+  const ps = `$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:ANON_LIEN)
+$s.TargetPath = "$env:SystemRoot\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+$s.Arguments = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $env:ANON_SCRIPT + '"'
+$s.IconLocation = "$env:SystemRoot\\System32\\shell32.dll,47"
+$s.Description = 'Créer une copie pseudonymisée à joindre dans Claude'
+$s.Save()`;
+  const r = await lancerPowerShell(ps, { ANON_LIEN: lien, ANON_SCRIPT: script });
+  if (!fs.existsSync(lien)) log("« Envoyer vers » non créé :", r.erreur.slice(0, 200));
+}
+
+let envoisEnCours = false;
+/** Traite les demandes déposées par « Envoyer vers » (une seule instance de l'extension les prend). */
+async function traiterEnvois() {
+  if (envoisEnCours) return;
+  envoisEnCours = true;
+  try {
+    let noms = [];
+    try { noms = fs.readdirSync(DOSSIER_ENVOIS).filter(n => /^[0-9a-f]{32}\.json$/.test(n)); } catch { return; }
+    for (const n of noms) {
+      const demande = path.join(DOSSIER_ENVOIS, n), prise = demande + ".encours";
+      try { fs.renameSync(demande, prise); } catch { continue; } // prise par une autre instance
+      let d;
+      try { d = JSON.parse(fs.readFileSync(prise, "utf8").replace(/^﻿/, "")); } catch { fs.rmSync(prise, { force: true }); continue; }
+      log("envoi : demande prise,", [].concat(d.fichiers || []).length, "fichier(s), forme", typeof d.fichiers);
+      const resultat = { ok: true, sorties: [], message: "" };
+      if (Date.now() - (d.quand || 0) > 120000) { fs.rmSync(prise, { force: true }); continue; }
+      const lignes = [];
+      let masques = 0;
+      for (const brut of [].concat(d.fichiers || []).slice(0, 50)) {
+        const nom = path.basename(String(brut));
+        try {
+          const chemin = reel(String(brut));
+          if (!chemin || !fs.statSync(chemin).isFile()) throw new ErreurOutil("fichier introuvable");
+          const ext = path.extname(chemin).toLowerCase();
+          if (!EXTENSIONS.has(ext) && ext !== ".dotx") throw new ErreurOutil("format non pris en charge");
+          if (fs.statSync(chemin).size > MAX_OCTETS) throw new ErreurOutil("plus de 25 Mo");
+          const c = courant();
+          const dossier = c && dansRacine(c.chemin, chemin) ? c.ref : refPour(path.dirname(chemin));
+          log("envoi : pseudonymisation", ext);
+          const r = await pseudonymiserFichier(chemin, dossier);
+          log("envoi : pseudonymisé");
+          // Nom de la copie lui-même pseudonymisé : il sera visible de Claude une fois le fichier joint
+          const base = path.basename(chemin, path.extname(chemin));
+          let nomPseudo = "document";
+          try { nomPseudo = filtrerMots(String((await anonymiserTexte(base.replace(/_/g, " "), dossier)).texte || "").split("\n")[0]); } catch { /* nom neutre */ }
+          const cible = await ecrireSansEcraser(path.dirname(chemin), nomDeBase(`${nomPseudo || "document"} (pseudonymisé)`), ".txt",
+            Buffer.from(String(r.texte || ""), "utf8"));
+          resultat.sorties.push(cible);
+          masques += r.nb_remplacements || 0;
+          journaliser("envoyer_vers", { ref: dossier, extension: ext, remplacements: r.nb_remplacements, entites: compteTypes(r.entites) });
+          lignes.push(`• ${nom} → ${path.basename(cible)} (${r.nb_remplacements || 0} donnée(s) masquée(s))` +
+            ((r.avertissements || []).length ? `\n   ⚠ ${r.avertissements.join(" ")}` : ""));
+        } catch (e) {
+          resultat.ok = false;
+          lignes.push(`• ${nom} : ${e instanceof ErreurOutil ? e.message : "erreur interne"}`);
+        }
+      }
+      resultat.message = (resultat.sorties.length
+        ? `${resultat.sorties.length} copie(s) pseudonymisée(s) créée(s) à côté des originaux (${masques} donnée(s) masquée(s)).\n` +
+          "Relisez-la, puis glissez-la dans Claude.\n\n" : "Aucune copie créée.\n\n") + lignes.join("\n");
+      const tmp = path.join(DOSSIER_ENVOIS, `${d.id}.resultat.tmp`);
+      fs.writeFileSync(tmp, JSON.stringify(resultat), "utf8");
+      fs.renameSync(tmp, path.join(DOSSIER_ENVOIS, `${d.id}.resultat.json`));
+      fs.rmSync(prise, { force: true });
+    }
+  } finally {
+    envoisEnCours = false;
+  }
+}
+
+function demarrerRaccourcis() {
+  if (!RACCOURCIS) { installerEnvoyerVers(false).catch(() => {}); return; }
+  demarrerEcouteur();
+  try { fs.mkdirSync(DOSSIER_ENVOIS, { recursive: true }); } catch { /* signalé au premier envoi */ }
+  installerEnvoyerVers(true).catch(e => log("« Envoyer vers » :", e.message));
+  setInterval(() => { traiterEnvois().catch(e => log("envois :", e.message)); }, 1000).unref();
+}
+
 function demarrer() {
   let tampon = "";
   process.stdin.setEncoding("utf8");
@@ -2798,9 +3126,11 @@ function demarrer() {
   });
   process.stdin.on("end", () => {
     if (processusSelecteur) { try { processusSelecteur.kill(); } catch { /* déjà terminé */ } }
+    if (ecouteur) { try { ecouteur.stdin.end(); ecouteur.kill(); } catch { /* déjà terminé */ } }
     process.exit(0);
   });
   log(`démarré (v${VERSION}) — serveur ${SERVEUR}`);
+  demarrerRaccourcis();
 }
 
 // Le serveur démarre TOUJOURS, y compris lorsque Claude Desktop charge ce fichier par l'intermédiaire

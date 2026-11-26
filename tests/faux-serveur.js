@@ -48,7 +48,8 @@ function creer() {
       vues.set(e.marqueur, { marqueur: e.marqueur, type, occurrences: n });
       out = out.split(valeur).join(e.marqueur);
     }
-    return { texte: out, entites: [...vues.values()], avertissements: [], nb_caracteres: texte.length, dossier: id };
+    return { texte: out, entites: [...vues.values()], avertissements: [], nb_caracteres: texte.length, dossier: id,
+      nb_remplacements: [...vues.values()].reduce((n, e) => n + e.occurrences, 0) };
   }
 
   function reidentifier(texte, id) {

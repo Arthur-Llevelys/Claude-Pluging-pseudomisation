@@ -100,10 +100,15 @@ class Stockage {
   }
 
   table(ref) {
+    // Relue si une autre instance de l'extension l'a modifiée sur le disque (et qu'aucun changement n'attend ici)
+    let mtime = 0;
+    try { mtime = fs.statSync(this.fichier(ref)).mtimeMs; } catch { /* pas encore de fichier */ }
+    if (this.cache.has(ref) && !this.modifies.has(ref) && (this.mtimes || new Map()).get(ref) !== mtime) this.cache.delete(ref);
     if (!this.cache.has(ref)) {
       let t;
       try { t = JSON.parse(fs.readFileSync(this.fichier(ref), "utf8")); } catch { t = null; }
       this.cache.set(ref, t || { version: 1, ref, cree: Date.now(), utilise: Date.now(), compteurs: {}, entrees: [] });
+      (this.mtimes = this.mtimes || new Map()).set(ref, mtime);
     }
     return this.cache.get(ref);
   }
@@ -155,8 +160,9 @@ class Stockage {
   enregistrer() {
     for (const ref of this.modifies) {
       const f = this.fichier(ref), tmp = f + ".tmp";
-      fs.writeFileSync(tmp, JSON.stringify(this.table(ref)), { encoding: "utf8", mode: 0o600 });
+      fs.writeFileSync(tmp, JSON.stringify(this.cache.get(ref) || this.table(ref)), { encoding: "utf8", mode: 0o600 });
       fs.renameSync(tmp, f);
+      try { (this.mtimes = this.mtimes || new Map()).set(ref, fs.statSync(f).mtimeMs); } catch { /* relu au prochain accès */ }
     }
     this.modifies.clear();
   }

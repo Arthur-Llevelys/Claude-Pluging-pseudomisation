@@ -1009,6 +1009,94 @@ test("pièces jointes : noms encodés (RFC 2231, mots encodés), courriel joint,
   assert.equal(p[1].octets.toString(), "DEF");
 });
 
+// --------------------------------------------------------------------------- raccourcis Windows (version 1.7.0)
+const attendre = async (cond, ms = 6000) => { const fin = Date.now() + ms; while (Date.now() < fin) { if (cond()) return true; await new Promise(r => setTimeout(r, 50)); } return false; };
+const lire = f => { try { return fs.readFileSync(f, "utf8"); } catch { return ""; } };
+const notifs = journal => lire(journal).split("\n").filter(l => l.startsWith("NOTIF\t")).map(l => {
+  const p = l.split("\t");
+  return { titre: Buffer.from(p[1], "base64").toString("utf8"), texte: Buffer.from(p[2], "base64").toString("utf8"), alerte: p[3] === "1" };
+});
+
+test("raccourcis : Coller pseudonymisé puis Remettre les vrais noms, avec les marqueurs du dossier courant", async t => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "anon-raccourcis-"));
+  t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+  const declencheur = path.join(tmp, "declencheur.txt"), journalEcouteur = path.join(tmp, "ecouteur.log");
+  const { client, j, faux } = await contexte(t, { env: {
+    ANON_RACCOURCIS: "true", ANON_ECOUTEUR_COMMANDE: JSON.stringify([process.execPath, path.join(__dirname, "faux-ecouteur.js")]),
+    ANON_FAUX_DECLENCHEUR: declencheur, ANON_FAUX_JOURNAL: journalEcouteur, ANON_ENVOIS: path.join(tmp, "envois"), ANON_SENDTO: "0",
+  } });
+  await client.outil("choisir_dossier", { chemin: j.affaire });
+  const lecture = await client.outil("lire_fichier_anonymise", { fichier: "Note Dupont.txt" });
+  const ref = /« (D-[0-9a-f]{8}) »/.exec(lecture.texte)[1];
+  const M = v => faux.dossiers.get(ref).entites.get(v).marqueur;
+
+  // Coller pseudonymisé : le presse-papiers est remplacé par la version pseudonymisée, puis l'écouteur colle
+  const original = "Bonjour Maître, je suis Jean Dupont (jean.dupont@exemple.fr) et ZORVAL me doit 1 200 €.";
+  fs.writeFileSync(j.pressePapiers, original, "utf8");
+  fs.writeFileSync(declencheur, "COLLER", "utf8");
+  assert.ok(await attendre(() => /^COLLER$/m.test(lire(journalEcouteur))), "l'écouteur a reçu l'ordre de coller");
+  assert.equal(lire(j.pressePapiers), `Bonjour Maître, je suis ${M("Jean Dupont")} (${M("jean.dupont@exemple.fr")}) et ${M("ZORVAL")} me doit 1 200 €.`,
+    "mêmes marqueurs que les pièces du dossier courant");
+  assert.ok(await attendre(() => notifs(journalEcouteur).length === 1));
+  assert.equal(notifs(journalEcouteur)[0].titre, "Texte pseudonymisé collé");
+  assert.match(notifs(journalEcouteur)[0].texte, /3 donnée\(s\) masquée\(s\), dossier « /);
+
+  // Remettre les vrais noms : texte à marqueurs copié depuis la réponse de Claude
+  fs.writeFileSync(j.pressePapiers, `Cher **${M("Jean Dupont")}**, nous écrivons à ${M("ZORVAL")}. [PERSONNE_9]`, "utf8");
+  fs.writeFileSync(declencheur, "REID", "utf8");
+  assert.ok(await attendre(() => notifs(journalEcouteur).length === 2));
+  assert.equal(lire(j.pressePapiers), "Cher Jean Dupont, nous écrivons à ZORVAL. [PERSONNE_9]");
+  assert.equal(notifs(journalEcouteur)[1].titre, "Vrais noms remis dans le presse-papiers");
+  assert.match(notifs(journalEcouteur)[1].texte, /2 marqueur\(s\) remplacé\(s\).*1 marqueur\(s\) inconnu/);
+  assert.equal(lire(journalEcouteur).match(/^COLLER$/gm).length, 1, "« vrais noms » ne colle rien tout seul");
+
+  // Cas d'erreur : presse-papiers vide, texte sans marqueur
+  fs.writeFileSync(j.pressePapiers, "", "utf8");
+  fs.writeFileSync(declencheur, "COLLER", "utf8");
+  assert.ok(await attendre(() => notifs(journalEcouteur).length === 3));
+  assert.match(notifs(journalEcouteur)[2].texte, /ne contient pas de texte/);
+  fs.writeFileSync(j.pressePapiers, "Aucun marqueur ici.", "utf8");
+  fs.writeFileSync(declencheur, "REID", "utf8");
+  assert.ok(await attendre(() => notifs(journalEcouteur).length === 4));
+  assert.match(notifs(journalEcouteur)[3].texte, /aucun marqueur/);
+  assert.equal(lire(j.pressePapiers), "Aucun marqueur ici.", "presse-papiers inchangé");
+
+  const journalOps = lire(j.journal);
+  assert.ok(/raccourci_coller/.test(journalOps) && /raccourci_reidentifier/.test(journalOps) && !/Dupont|ZORVAL/.test(journalOps), "journal sans valeur");
+  aucuneFuite(client, j);
+});
+
+test("« Envoyer vers » : copie pseudonymisée créée à côté du fichier, nom lui-même pseudonymisé ; demandes anciennes ignorées", async t => {
+  const envois = fs.mkdtempSync(path.join(os.tmpdir(), "anon-envois-"));
+  t.after(() => fs.rmSync(envois, { recursive: true, force: true }));
+  const { client, j, faux } = await contexte(t, { env: {
+    ANON_RACCOURCIS: "1", ANON_ECOUTEUR_COMMANDE: JSON.stringify([process.execPath, "-e", "process.stdin.resume()"]),
+    ANON_ENVOIS: envois, ANON_SENDTO: "0",
+  } });
+  await client.outil("choisir_dossier", { chemin: j.affaire });
+  const source = path.join(j.affaire, "Courrier Dupont.txt");
+  fs.writeFileSync(source, "Courrier de Jean Dupont à ZORVAL & Fils.", "utf8");
+  const demander = (id, fichiers, quand = Date.now()) => fs.writeFileSync(path.join(envois, `${id}.json`), JSON.stringify({ id, quand, fichiers }), "utf8");
+
+  demander("a".repeat(32), [source, path.join(j.affaire, "absent.pdf"), path.join(j.affaire, "tableau.xlsx")]);
+  const resultat = path.join(envois, "a".repeat(32) + ".resultat.json");
+  assert.ok(await attendre(() => fs.existsSync(resultat), 8000), "demande traitée");
+  const r = JSON.parse(fs.readFileSync(resultat, "utf8"));
+  assert.equal(r.sorties.length, 1);
+  assert.equal(path.dirname(r.sorties[0]), fs.realpathSync(j.affaire), "copie à côté de l'original");
+  assert.match(path.basename(r.sorties[0]), /^Courrier PERSONNE_\d+ \(pseudonymisé\)\.txt$/, path.basename(r.sorties[0]));
+  const ref = [...faux.dossiers.keys()].find(k => k.startsWith("D-"));
+  const M = v => faux.dossiers.get(ref).entites.get(v).marqueur;
+  assert.equal(fs.readFileSync(r.sorties[0], "utf8"), `Courrier de ${M("Jean Dupont")} à ${M("ZORVAL & Fils")}.`);
+  assert.match(r.message, /1 copie\(s\) pseudonymisée\(s\) créée\(s\).*\n[\s\S]*absent\.pdf : fichier introuvable[\s\S]*tableau\.xlsx : format non pris en charge/);
+  assert.ok(fs.existsSync(source), "original intact");
+
+  demander("b".repeat(32), [source], Date.now() - 10 * 60000);
+  await new Promise(res => setTimeout(res, 2500));
+  assert.ok(!fs.existsSync(path.join(envois, "b".repeat(32) + ".resultat.json")), "une demande vieille de 10 minutes n'est pas traitée");
+  aucuneFuite(client, j);
+});
+
 // --------------------------------------------------------------------------- fonctions internes
 test("zip : aller-retour et lecture d'une archive stockée", () => {
   const entrees = [ext.creerEntree("mimetype", "application/vnd.oasis.opendocument.text"), ext.creerEntree("content.xml", "<a>é</a>".repeat(500))];
