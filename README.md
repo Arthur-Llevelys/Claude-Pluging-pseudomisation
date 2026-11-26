@@ -20,11 +20,12 @@ Courrier enregistré      : « Madame Hélène Vasseur… » (Word, dans le doss
 > Pensée pour les avocats et les professions tenues au secret : l'outil limite ce qui est transmis à l'IA, il ne
 > remplace pas votre vigilance. Aucun détecteur n'est exhaustif : relisez avant tout envoi.
 >
-> **Ce qui n'est pas filtré** : ce que vous tapez ou collez directement dans la conversation, et les fichiers que vous
+> **Comment ça fonctionne ?**
 >
-> - **Ne pas faire :** Joindre ou glisser des fichiers dans la zone de saisie de Claude — ils partent tels quels.
-> - **Ce qu'il faut faire :** Il faut laissez les pièces dans le dossier de l'affaire et demandez à Claude d'ouvrir un dossier
->   ou de choisir un dossier ;
+> - **Ne pas faire :** taper une instruction ou copier/collez un texte directement dans la conversation de Claude Desktop ou joindre
+>  ou glisser des fichiers dans la zone de saisie de Claude — ils partent tels quels à Anthropic ;
+> - **Ce qu'il faut faire :** Il faut laissez les pièces dans le dossier dédié à l'affaire et demandez à Claude : « Choisis le dossier de l'affaire »
+>   ou : « Ouvre un nouveau dossier » ;
 > - **Pour un texte**, il faut soit sélectionner le texte, copiez le texte ( **Ctrl + C** ) , puis demandez à Claude de « lire le presse-papiers ».
 >   soit depuis la version 1.7.0 : sélectionner le texte à copier, copiez le texte ( **Ctrl + C** ) puis coller le dans
 >   la case des instructions de Claude Desktop en appuyant simultanément sur :  **Ctrl + Alt + Maj + V** (« Coller pseudonymisé ») ;
