@@ -68,7 +68,43 @@ const crypto = require("crypto");
 const { spawn } = require("child_process");
 const { fileURLToPath } = require("url");
 
-const VERSION = "1.8.0";
+// ---------------------------------------------------------------------------
+// Version 1.9.0 — fonctionnement hors de Claude Desktop (Mistral Vibe…) : les réglages viennent d'un fichier
+// local désigné par ANON_REGLAGES (écrit par l'installateur Vibe). Les valeurs secrètes y sont chiffrées par
+// Windows (DPAPI, liées à la session de l'utilisateur) : { "ANON_CLE": { "dpapi": "…" } }. Une variable
+// d'environnement déjà renseignée l'emporte toujours sur le fichier.
+// ---------------------------------------------------------------------------
+function dechiffrerDpapi(b64) {
+  if (process.platform !== "win32") throw new Error("DPAPI réservé à Windows");
+  const ps = "Add-Type -AssemblyName System.Security; $b = [Convert]::FromBase64String($env:ANON_B64); " +
+    "$r = [Security.Cryptography.ProtectedData]::Unprotect($b, $null, [Security.Cryptography.DataProtectionScope]::CurrentUser); " +
+    "[Console]::Out.Write([Text.Encoding]::UTF8.GetString($r))";
+  const r = require("child_process").spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ps],
+    { env: Object.assign({}, process.env, { ANON_B64: b64 }), encoding: "utf8", windowsHide: true, timeout: 20000 });
+  if (r.status !== 0) throw new Error("déchiffrement impossible");
+  return r.stdout;
+}
+function chargerReglagesFichier(fichier) {
+  if (!fichier) return;
+  let r;
+  try { r = JSON.parse(fs.readFileSync(fichier, "utf8").replace(/^﻿/, "")); } catch (e) {
+    process.stderr.write("[anonymiseur] réglages illisibles : " + (e.code || "format") + "\n"); return;
+  }
+  for (const [cle, valeur] of Object.entries(r || {})) {
+    if (!/^ANON_[A-Z0-9_]+$/.test(cle) || cle === "ANON_REGLAGES" || cle === "ANON_MODE_TEST") continue;
+    const actuelle = process.env[cle];
+    if (actuelle && !/^\$\{user_config\./.test(actuelle)) continue;
+    try {
+      if (valeur && typeof valeur === "object" && typeof valeur.dpapi === "string") process.env[cle] = dechiffrerDpapi(valeur.dpapi);
+      else if (["string", "number", "boolean"].includes(typeof valeur)) process.env[cle] = String(valeur);
+    } catch (e) {
+      process.stderr.write(`[anonymiseur] réglage ${cle} non déchiffré : ${e.message}\n`);
+    }
+  }
+}
+chargerReglagesFichier(process.env.ANON_REGLAGES || "");
+
+const VERSION = "1.9.0";
 const SERVEUR = (process.env.ANON_SERVEUR || "http://127.0.0.1:8765").replace(/\/+$/, "");
 const CLE = process.env.ANON_CLE || "";
 const DOSSIER_TRAVAIL = process.env.ANON_DOSSIER_TRAVAIL || "";
@@ -3251,7 +3287,17 @@ function demarrer() {
 // de son propre lanceur (Node intégré) : dans ce cas le fichier n'est pas le « module principal ».
 // Seuls les tests automatiques, qui positionnent ANON_MODE_TEST=1 avant de charger le fichier,
 // obtiennent les fonctions internes sans démarrage.
-if (!(process.env.ANON_MODE_TEST === "1" && require.main !== module)) {
+// Consignes d'un agent Vibe dédié (1.9.0) : « node index.js --consignes-agent » les écrit sur la sortie standard.
+const CONSIGNES_AGENT =
+  "Vous êtes l'assistant d'un cabinet d'avocats. Vous travaillez sur des dossiers clients couverts par le secret " +
+  "professionnel, exclusivement au moyen des outils de l'Anonymiseur (cabinet) : choisir_dossier, lister_fichiers, " +
+  "lire_fichier_anonymise, enregistrer_document, etc. Vous n'avez et ne cherchez aucun autre accès aux fichiers du poste : " +
+  "ne demandez jamais à l'utilisateur de coller un document ou un texte en clair dans la conversation ; proposez " +
+  "importer_presse_papiers ou importer_fichiers. Répondez en français, avec la rigueur d'un juriste.\n\n" + INSTRUCTIONS + "\n";
+
+if (process.argv.includes("--consignes-agent")) {
+  process.stdout.write(CONSIGNES_AGENT);
+} else if (!(process.env.ANON_MODE_TEST === "1" && require.main !== module)) {
   demarrer();
 } else {
   module.exports = {
@@ -3260,6 +3306,6 @@ if (!(process.env.ANON_MODE_TEST === "1" && require.main !== module)) {
     refPour, TYPES_PAR_DEFAUT, SCRIPT_POWERSHELL_SELECTEUR, CODE_CSHARP_SELECTEUR, TITRE_SELECTEUR,
     TITRE_FICHIERS, TITRE_LIBELLE, lirePressePapiers, ecrirePressePapiers, ouvrirSelecteurFichiers, saisirLibelle,
     texteSansMarkdown, nettoyerLibelle, prochaineReference, journaliser, FICHIER_AFFAIRE,
-    appliquerModele, motifSouple, dotxVersDocx, ouvrirSurPoste, saisirTexte, TITRE_ENTITE,
+    appliquerModele, motifSouple, dotxVersDocx, ouvrirSurPoste, saisirTexte, TITRE_ENTITE, CONSIGNES_AGENT,
   };
 }
