@@ -104,7 +104,8 @@ function chargerReglagesFichier(fichier) {
 }
 chargerReglagesFichier(process.env.ANON_REGLAGES || "");
 
-const VERSION = "1.9.0";
+const VERSION = "1.9.1";
+const MODE_HTTP = process.argv.includes("--http");
 const SERVEUR = (process.env.ANON_SERVEUR || "http://127.0.0.1:8765").replace(/\/+$/, "");
 const CLE = process.env.ANON_CLE || "";
 const DOSSIER_TRAVAIL = process.env.ANON_DOSSIER_TRAVAIL || "";
@@ -2829,7 +2830,7 @@ function demanderRacines() {
   envoyer({ jsonrpc: "2.0", id, method: "roots/list" });
 }
 
-async function traiter(msg) {
+async function traiter(msg, sortie = envoyer) {
   const { id, method, params } = msg;
 
   // Réponse à une requête émise par l'extension (roots/list)
@@ -2842,13 +2843,13 @@ async function traiter(msg) {
     return;
   }
 
-  const repondre = result => id !== undefined && envoyer({ jsonrpc: "2.0", id, result });
-  const echec = (code, message) => id !== undefined && envoyer({ jsonrpc: "2.0", id, error: { code, message } });
+  const repondre = result => id !== undefined && sortie({ jsonrpc: "2.0", id, result });
+  const echec = (code, message) => id !== undefined && sortie({ jsonrpc: "2.0", id, error: { code, message } });
 
   switch (method) {
     case "initialize": {
       const demande = params?.protocolVersion;
-      clientDeclareRacines = !!(params?.capabilities && params.capabilities.roots);
+      clientDeclareRacines = !MODE_HTTP && !!(params?.capabilities && params.capabilities.roots);
       return repondre({
         protocolVersion: VERSIONS_PROTOCOLE.includes(demande) ? demande : VERSIONS_PROTOCOLE[0],
         capabilities: { tools: { listChanged: false } },
@@ -3287,6 +3288,59 @@ function demarrer() {
 // de son propre lanceur (Node intégré) : dans ce cas le fichier n'est pas le « module principal ».
 // Seuls les tests automatiques, qui positionnent ANON_MODE_TEST=1 avant de charger le fichier,
 // obtiennent les fonctions internes sans démarrage.
+// ---------------------------------------------------------------------------
+// Version 1.9.1 — transport HTTP local (« streamable HTTP », réponses JSON) pour les clients qui ne savent pas lancer
+// une extension locale (Vibe Desktop sous Windows). « node index.js --http » : écoute sur 127.0.0.1 seulement,
+// jeton obligatoire (ANON_HTTP_JETON, en-tête Authorization: Bearer), requêtes venant d'un navigateur refusées.
+// ---------------------------------------------------------------------------
+function demarrerHttp() {
+  const http = require("http");
+  const port = parseInt(process.env.ANON_HTTP_PORT || "8790", 10) || 8790;
+  const jeton = process.env.ANON_HTTP_JETON || "";
+  if (jeton.length < 16) { log("mode HTTP : jeton absent ou trop court (ANON_HTTP_JETON), arrêt."); process.exit(2); }
+  const attendu = crypto.createHash("sha256").update("Bearer " + jeton).digest();
+  const hotesAdmis = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
+  const json = (res, code, corps) => {
+    const b = corps === undefined ? "" : JSON.stringify(corps);
+    res.writeHead(code, Object.assign({ "Cache-Control": "no-store" }, b ? { "Content-Type": "application/json; charset=utf-8" } : {}));
+    res.end(b);
+  };
+  const serveur = http.createServer((req, res) => {
+    // Protection contre les pages Web (rebinding DNS, requêtes d'un navigateur) et les autres programmes du poste
+    if (!hotesAdmis.has(String(req.headers.host || "").toLowerCase()) || req.headers.origin) return json(res, 403, { erreur: "refusé" });
+    const fourni = crypto.createHash("sha256").update(String(req.headers.authorization || "")).digest();
+    if (!crypto.timingSafeEqual(fourni, attendu)) return json(res, 401, { erreur: "jeton invalide" });
+    const chemin = (req.url || "").split("?")[0];
+    if (chemin !== "/mcp") return json(res, 404, { erreur: "inconnu" });
+    if (req.method === "DELETE") return json(res, 200);
+    if (req.method !== "POST") { res.setHeader("Allow", "POST, DELETE"); return json(res, 405, { erreur: "méthode non prise en charge" }); }
+    const morceaux = [];
+    let taille = 0;
+    req.on("data", m => { taille += m.length; if (taille > 50 * 1024 * 1024) req.destroy(); else morceaux.push(m); });
+    req.on("end", async () => {
+      let msg;
+      try { msg = JSON.parse(Buffer.concat(morceaux).toString("utf8")); } catch {
+        return json(res, 400, { jsonrpc: "2.0", id: null, error: { code: -32700, message: "JSON invalide" } });
+      }
+      const lot = Array.isArray(msg) ? msg : [msg];
+      const reponses = [];
+      for (const m of lot) {
+        try { await traiter(m, r => reponses.push(r)); } catch (e) { log("erreur", e.stack || e.message); }
+      }
+      if (!reponses.length) return json(res, 202);
+      json(res, 200, Array.isArray(msg) ? reponses : reponses[0]);
+    });
+  });
+  serveur.on("error", e => {
+    log(e.code === "EADDRINUSE" ? `mode HTTP : le port ${port} est déjà utilisé (extension déjà lancée ?), arrêt.` : "mode HTTP : " + e.message);
+    process.exit(3);
+  });
+  serveur.listen(port, "127.0.0.1", () => {
+    log(`démarré en mode HTTP local (v${VERSION}) — http://127.0.0.1:${port}/mcp — serveur ${SERVEUR}`);
+    demarrerRaccourcis();
+  });
+}
+
 // Consignes d'un agent Vibe dédié (1.9.0) : « node index.js --consignes-agent » les écrit sur la sortie standard.
 const CONSIGNES_AGENT =
   "Vous êtes l'assistant d'un cabinet d'avocats. Vous travaillez sur des dossiers clients couverts par le secret " +
@@ -3297,6 +3351,8 @@ const CONSIGNES_AGENT =
 
 if (process.argv.includes("--consignes-agent")) {
   process.stdout.write(CONSIGNES_AGENT);
+} else if (MODE_HTTP) {
+  demarrerHttp();
 } else if (!(process.env.ANON_MODE_TEST === "1" && require.main !== module)) {
   demarrer();
 } else {

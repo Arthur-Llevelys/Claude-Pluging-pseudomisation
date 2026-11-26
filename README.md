@@ -1,7 +1,8 @@
 # AxiorHub : Extension de pseudonymisation dans Claude Desktop
 **Créée par Timo Rainio Avocat** · Logiciel libre sous licence [GNU AGPL v3 ou ultérieure](LICENSE) · Windows, macOS, Linux
 
-## 📦 [Télécharger](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/raw/main/paquets/anonymiseur-cabinet-1.9.0.mcpb)
+## 📦 [Télécharger](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/raw/main/paquets/anonymiseur-cabinet-1.9.1.mcpb)
+### Version pour Mistral Vibe Desktop : [anonymiseur-vibe-1.9.1.zip](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/raw/main/paquets/anonymiseur-vibe-1.9.1.zip) (voir « Nouveau dans la 1.9 »)
 
 
 ### Extension pour Claude Desktop qui permet de travailler avec Claude sur des dossiers clients sans que les données personnelles quittent votre poste. 
@@ -53,36 +54,52 @@ Un journal local trace chaque opération **sans aucune donnée en clair**.
 données réelles. Le texte ré-identifié est écrit sur votre poste ou dans le presse-papiers, jamais dans la conversation.
 
 ---
-## Nouveau dans la 1.9.0 : la même extension dans Mistral Vibe
+## Nouveau dans la 1.9 : la même extension dans Mistral Vibe Desktop
 
-L'Anonymiseur fonctionne aussi avec **Mistral Vibe** (Vibe Desktop, sessions locales, et Vibe en ligne de commande),
-avec les mêmes outils, la même détection, les mêmes tables de correspondance et les mêmes marqueurs que dans Claude.
+L'Anonymiseur fonctionne aussi avec **Mistral Vibe Desktop** (mode Code, sessions locales), avec les mêmes outils, la
+même détection, les mêmes tables de correspondance et les mêmes marqueurs que dans Claude.
 
 **Installation (Windows)**
 
 1. Installez **Node.js** (version LTS, [nodejs.org](https://nodejs.org)) : Vibe ne le fournit pas, contrairement à Claude Desktop.
-2. Téléchargez [`paquets/anonymiseur-vibe-1.9.0.zip`](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/raw/main/paquets/anonymiseur-vibe-1.9.0.zip),
+2. Téléchargez [`paquets/anonymiseur-vibe-1.9.1.zip`](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/raw/main/paquets/anonymiseur-vibe-1.9.1.zip),
    décompressez-le, puis double-cliquez sur **`vibe\installer-pour-vibe.cmd`**.
-3. Une fenêtre s'ouvre : adresse du serveur et **clé d'API** (ou « Moteur local »), dossier racine des affaires. Si l'extension
-   est déjà installée dans Claude Desktop, ses réglages non secrets sont repris ; la clé se retape (sur le serveur Ubuntu :
+3. Une fenêtre s'ouvre : adresse du serveur et **clé d'API** (ou « Moteur local »), dossier racine des affaires, case
+   **« Verrouiller le dossier racine pour Vibe »** (laissez-la cochée). Si l'extension est déjà installée dans Claude
+   Desktop, ses réglages non secrets sont repris ; la clé se retape (sur le serveur Ubuntu :
    `sudo grep ANON_API_KEY /etc/anonymiseur/anonymiseur.env`). Elle est chiffrée par Windows, jamais écrite en clair.
-4. Fermez puis rouvrez Vibe Desktop ; dans une session locale, choisissez l'agent **« Anonymiseur (cabinet) »**.
+4. Fermez puis rouvrez Vibe Desktop ; ouvrez une session locale **sur le dossier verrouillé** (ou un de ses
+   sous-dossiers), puis demandez par exemple « Liste les pièces du dossier ».
 
-**Pourquoi un agent dédié ?** Vibe est un agent de programmation : ses outils habituels (lire un fichier, lancer une
-commande, chercher dans un dossier) peuvent lire une pièce **en clair** et l'envoyer à Mistral. L'agent « Anonymiseur
-(cabinet) » n'a accès **qu'aux outils de l'extension** : les pièces ne lui parviennent que pseudonymisées. Les lectures
-passent sans validation ; l'écriture d'un livrable vous est soumise. **N'utilisez pas les autres agents de Vibe sur vos
-dossiers clients.**
+**Comment ça marche.** Vibe Desktop sous Windows ne sait pas lancer une extension locale (erreur
+`mcp_transport_failed`, y compris pour d'autres extensions que celle-ci). L'Anonymiseur tourne donc **en tâche de fond**,
+sans fenêtre, à partir de l'ouverture de session Windows (raccourci « Anonymiseur pour Vibe » du dossier Démarrage) ;
+il n'écoute que le poste lui-même (`127.0.0.1`), exige un jeton secret et refuse toute requête venant d'une page Web.
+Vibe s'y connecte comme à un connecteur.
+
+**Le dossier verrouillé, protection indispensable.** Vibe est un agent de programmation : dans une session ordinaire,
+il lit les fichiers **en clair** et envoie au modèle l'**arborescence du dossier** (donc les noms de fichiers). Vibe
+Desktop ne permet pas de choisir un agent personnalisé : c'est le **dossier** qui protège. Dans un dossier verrouillé
+(fichier `.vibe\config.toml` posé par l'installateur), toute session n'a que les outils de l'Anonymiseur — lecture
+directe des fichiers et commandes refusées — et Vibe n'envoie ni l'arborescence ni les détails du poste.
+
+> **Précautions propres à Vibe Desktop**
+> - **N'ouvrez jamais une session Vibe sur un dossier client non verrouillé.**
+> - Le **nom du dossier** de la session reste visible du modèle : travaillez dans des dossiers d'affaires à référence
+>   neutre (« 2026-11-25-01 », créés par « Ouvre un nouveau dossier »), pas dans un dossier nommé d'après le client.
+> - Vibe Desktop n'applique pas les consignes de l'extension : s'il vous propose de **coller ou glisser** un document
+>   dans la conversation, refusez ; demandez-lui d'utiliser les outils de l'Anonymiseur.
+> - Le mode **Work** de Vibe Desktop n'a pas accès à l'extension : utilisez le mode **Code**, session locale.
 
 | Fichier du dossier `vibe` | Rôle |
 |---|---|
-| `installer-pour-vibe.cmd` | Copie l'extension, ouvre les réglages, la déclare dans Vibe (configuration sauvegardée, autres entrées intactes), crée l'agent |
-| `reglages-vibe.cmd` | Rouvre la fenêtre des réglages (nouvelle clé, autre serveur, moteur local) |
-| `desinstaller-de-vibe.cmd` | Retire l'extension et l'agent de Vibe ; réglages et tables de correspondance conservés |
+| `installer-pour-vibe.cmd` | Copie l'extension, ouvre les réglages, la lance en tâche de fond, la déclare dans Vibe (configuration sauvegardée, autres entrées intactes), verrouille le dossier racine |
+| `reglages-vibe.cmd` | Rouvre la fenêtre des réglages (nouvelle clé, autre serveur, moteur local) et relance l'extension |
+| `verrouiller-un-dossier-pour-vibe.cmd` | Verrouille un autre dossier |
+| `desinstaller-de-vibe.cmd` | Arrête l'extension, retire verrous, lancement automatique et déclaration dans Vibe ; réglages et tables de correspondance conservés |
 
 Les raccourcis Ctrl + Alt + Maj + V / R et « Envoyer vers » restent communs : si Claude et Vibe sont ouverts ensemble,
-une seule copie de l'extension les prend en charge. À vérifier sur votre poste : le mode **Work** de Vibe Desktop
-n'accepte peut-être pas les extensions locales (seules les sessions locales du mode Code sont documentées).
+une seule copie de l'extension les prend en charge.
 
 ## Nouveau dans la 1.8.0 : le dossier de travail se gère tout seul
 
@@ -159,7 +176,7 @@ Détails et mesures : [`prototype-autonome/RESULTATS.md`](prototype-autonome/RES
 
 1. **Claude Desktop** installé et connecté.
 
-2. **Téléchargez** [`paquets/anonymiseur-cabinet-1.9.0.mcpb`](paquets/) puis, **dans Claude Desktop** : Paramètres (`Ctrl` + `,`)
+2. **Téléchargez** [`paquets/anonymiseur-cabinet-1.9.1.mcpb`](paquets/) puis, **dans Claude Desktop** : Paramètres (`Ctrl` + `,`)
    → **Extensions** → glissez le fichier dans la fenêtre et validez l'installation.
 
 3. **Dans les réglages de l'extension :**
@@ -241,7 +258,7 @@ L'extension parle MCP, un protocole ouvert que d'autres assistants commencent à
 
 | Assistant | Possible ? | Ce qu'il faudrait |
 |---|---|---|
-| **Mistral Vibe** (ligne de commande et sessions locales de Vibe Desktop) | **Oui, depuis la 1.9.0** | Installateur `vibe/installer-pour-vibe.cmd` et agent dédié « Anonymiseur (cabinet) » (voir « Nouveau dans la 1.9.0 ») |
+| **Mistral Vibe Desktop** (mode Code, sessions locales) | **Oui, depuis la 1.9** | Installateur `vibe/installer-pour-vibe.cmd` : extension en tâche de fond et dossier verrouillé (voir « Nouveau dans la 1.9 ») |
 | **ChatGPT** | Pas directement : ChatGPT n'accepte que des serveurs distants, et l'accès complet (écriture des livrables) est réservé aux offres Business et Enterprise | Rendre l'extension joignable par un tunnel sécurisé (« Secure MCP Tunnel » d'OpenAI), avec authentification |
 
 En attendant, les gestes **Ctrl + Alt + Maj + V** (coller pseudonymisé), **Ctrl + Alt + Maj + R** (remettre les vrais noms)
