@@ -21,13 +21,14 @@ Courrier enregistré      : « Madame Hélène Vasseur… » (Word, dans le doss
 > remplace pas votre vigilance. Aucun détecteur n'est exhaustif : relisez avant tout envoi.
 >
 > **Ce qui n'est pas filtré** : ce que vous tapez ou collez directement dans la conversation, et les fichiers que vous
-> **joignez ou glissez dans la zone de saisie** de Claude — ils partent tels quels.
-> - Laissez les pièces dans le dossier de l'affaire (ou demandez à Claude « importe les pièces »)
-> et demandez à Claude de les lire ;
-> - Pour un texte, soit sélectionner le texte, copiez le texte ( **Ctrl + C** ) , puis demandez à Claude de « lire le presse-papiers ».
-> - soit depuis la version 1.7.0 : sélectionner le texte à copier, copiez le texte ( **Ctrl + C** ) puis coller le dans
+>
+> - **Ne pas faire :** Joindre ou glisser des fichiers dans la zone de saisie de Claude — ils partent tels quels.
+> - **Ce qu'il faut faire :** Il faut laissez les pièces dans le dossier de l'affaire et demandez à Claude d'ouvrir un dossier
+>   ou de choisir un dossier ;
+> - **Pour un texte**, il faut soit sélectionner le texte, copiez le texte ( **Ctrl + C** ) , puis demandez à Claude de « lire le presse-papiers ».
+>   soit depuis la version 1.7.0 : sélectionner le texte à copier, copiez le texte ( **Ctrl + C** ) puis coller le dans
 >   la case des instructions de Claude Desktop en appuyant simultanément sur :  **Ctrl + Alt + Maj + V** (« Coller pseudonymisé ») ;
-> - Pour un fichier, effectuer un clic droit → **Envoyer vers → « Anonymiseur - copie pseudonymisée »**, puis glissez la copie dans Claude.
+> - **Pour un fichier**, effectuer un clic droit → **Envoyer vers → « Anonymiseur - copie pseudonymisée »**, puis glissez la copie dans Claude.
 ---
 ## Comment utiliser l'extension avec Claude
 
