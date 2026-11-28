@@ -1,9 +1,9 @@
 # AxiorHub : Extension de pseudonymisation dans Claude Desktop
 **Créée par Timo Rainio Avocat** · Logiciel libre sous licence [GNU AGPL v3 ou ultérieure](LICENSE) · Windows, macOS, Linux
 
-## 📦 [Télécharger](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/raw/main/paquets/anonymiseur-cabinet-1.9.1.mcpb)
-### Version pour Mistral Vibe Desktop : [anonymiseur-vibe-1.9.1.zip](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/raw/main/paquets/anonymiseur-vibe-1.9.1.zip) (voir « Nouveau dans la 1.9 »)
+## 📦 [Télécharger l'extension pour Claude Desktop](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/raw/main/paquets/anonymiseur-cabinet-1.9.1.mcpb)
 
+*Nouveau : Version pour Mistral Vibe Desktop : [anonymiseur-vibe-1.9.1.zip](https://github.com/Arthur-Llevelys/Claude-Pluging-pseudomisation/raw/main/paquets/anonymiseur-vibe-1.9.1.zip) (voir « Nouveau dans la 1.9 »)*
 
 ### Extension pour Claude Desktop qui permet de travailler avec Claude sur des dossiers clients sans que les données personnelles quittent votre poste. 
 
